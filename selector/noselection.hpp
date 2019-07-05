@@ -20,7 +20,7 @@ namespace sferes{   // Group named sferes
                     indiv->random();    //Individual is generated randomly
                 }
             }
-        };
-    }
-}
+        }; // struct NoSelection
+    } // namespace selector
+} // namespace sferes
 #endif
