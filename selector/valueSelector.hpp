@@ -2,26 +2,26 @@
 #define _SELECTOR_VALUESELECTOR_HPP
 
 namespace sferes{
-  namespace selector{
+    namespace selector{
+        struct getFitness{
+            template <typename Phen> 
+            static inline double getValue(Phen p){return p->fit().value();}
+        };
 
- 
-    struct getFitness{
-      template <typename Phen> 
-      static inline double getValue(Phen p){return p->fit().value();}
-    };
+        struct getNovelty{
+            template <typename Phen> 
+            static inline double getValue(Phen p){return p->fit().novelty();}
+        };
 
-    struct getNovelty{
-      template <typename Phen> 
-      static inline double getValue(Phen p){return p->fit().novelty();}
-    };
-
-    struct getCuriosity{
-      template <typename Phen> 
-      static inline double getValue(Phen p){return p->fit().curiosity();}
-    };
-    struct getLocalQuality{
-      template <typename Phen> 
-      static inline double getValue(Phen p){return p->fit().local_quality();}
-    };
-  }}
+        struct getCuriosity{
+            template <typename Phen> 
+            static inline double getValue(Phen p){return p->fit().curiosity();}
+        };
+        
+        struct getLocalQuality{
+            template <typename Phen> 
+            static inline double getValue(Phen p){return p->fit().local_quality();}
+        };
+    }
+}
 #endif
