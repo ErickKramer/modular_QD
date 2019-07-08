@@ -78,79 +78,78 @@
 using namespace sferes::gen::evo_float;
 
 
-struct Params
-{
+struct Params{
+    struct nov{
+        SFERES_CONST size_t deep=3; //7x7
+        SFERES_CONST size_t k=15; // Nearest neighbors
+        SFERES_CONST double l=0.01; // Distance threshold for the archive container
+        SFERES_CONST double eps=0.1; // epsilon for exclusive e-dominance
+    };
 
-  struct nov{
-    SFERES_CONST size_t deep=3; //7x7
-    SFERES_CONST size_t k=15;
-    SFERES_CONST double l=0.01;
-    SFERES_CONST double eps=0.1;
-    
-  };
-    struct ea
-    {
+    struct ea{
         /*SFERES_CONST size_t res_x = 256;
       SFERES_CONST size_t res_y = 256;*/
 
-        SFERES_CONST size_t behav_dim = 2;
+        SFERES_CONST size_t behav_dim = 2; // x,y position
         SFERES_ARRAY(size_t, behav_shape, 100, 100);
 
     };
-    struct pareto
-    {
-      SFERES_CONST bool genoDiv =true;
+
+    struct pareto{
+        SFERES_CONST bool genoDiv =true;
     };
-    struct pop
-    {
+
+    struct pop{
         // number of initial random points
         //SFERES_CONST size_t init_size = 100;
         // size of a batch
-        SFERES_CONST size_t size = 200;
-        SFERES_CONST size_t nb_gen = 50001;
-        SFERES_CONST size_t dump_period = 1000;
+        SFERES_CONST size_t size = 200; // Size of the population (batch)
+        SFERES_CONST size_t nb_gen = 50001; // Number of generations
+        SFERES_CONST size_t dump_period = 1000; // Refreshment rate
     };
-    struct parameters
-    {
-        SFERES_CONST float min = -1;
+
+    struct parameters{
+        SFERES_CONST float min = -1; // Limits of the phenotype parameters
         SFERES_CONST float max = 1;
     };
-    struct evo_float
-    {
-        SFERES_CONST float cross_rate = 0.0f;
+
+    struct evo_float{
+        SFERES_CONST float cross_rate = 0.0f; // Cross-over rate
         SFERES_CONST float mutation_rate = 0.125f;
-        SFERES_CONST float eta_m = 10.0f;
-        SFERES_CONST float eta_c = 10.0f;
-        SFERES_CONST mutation_t mutation_type = polynomial;
-        SFERES_CONST cross_over_t cross_over_type = sbx;
+        SFERES_CONST float eta_m = 10.0f; // Parameter for the polynomial mutation
+        SFERES_CONST float eta_c = 10.0f; // Parameter for the polynomial mutation
+        SFERES_CONST mutation_t mutation_type = polynomial; // Type of polynomial
+        SFERES_CONST cross_over_t cross_over_type = sbx; // Type of cross-over
     };
 
 };
 
 
 
-FIT_QD(ArmFit)
-{
+FIT_QD(ArmFit){
+    // Minimizing the variance of the angular position of the joints. 
+    // Captures the idea that all the joints of the arm should contribute equally to 
+    // the movement
     public:
-    template<typename Indiv>
-    void eval(Indiv& ind)
-    {
-    
-      Eigen::VectorXd angle(ind.size());
-      for (size_t i = 0; i < ind.size(); ++i)
-	angle[i] = ind.data(i)*M_PI/2;
-      this->_value = - sqrt((angle.array()-angle.mean()).square().mean());
-      Eigen::Vector3d pos=robot::Arm::forward_model(angle);
-      float L=robot::Arm::max_length()*1.1;
-      std::vector<float> data = {(float) (pos[0]+L)/(2*L), (float) (pos[1]+L)/(2*L)};
-      //this->set_desc(ind.gen().data(0), ind.gen().data(1));
-      this->set_desc(data);
-    }
+        template<typename Indiv>
+        void eval(Indiv& ind){
+            Eigen::VectorXd angle(ind.size());
+            for (size_t i = 0; i < ind.size(); ++i)
+                angle[i] = ind.data(i)*M_PI/2; // Constraint the joint angles between [-pi/2, pi/2]
+            
+            this->_value = - sqrt((angle.array()-angle.mean()).square().mean());
 
+            Eigen::Vector3d pos=robot::Arm::forward_model(angle); // Get the position of the end effector
+            float L=robot::Arm::max_length()*1.1; // Total length of the robot times a boundary factor
+            // Normalized final position of the gripper according to a square bounding box with values
+            // between 0 and 1
+            std::vector<float> data = {(float) (pos[0]+L)/(2*L), (float) (pos[1]+L)/(2*L)};
+            //this->set_desc(ind.gen().data(0), ind.gen().data(1));
+            this->set_desc(data);
+        }
 };
 
-int main()
-{
+int main(){
     srand(time(NULL));
     tbb::task_scheduler_init init(20);  
 
@@ -162,53 +161,55 @@ int main()
     typedef eval::Parallel<Params> eval_t;
     /*#ifndef NO_PARALLEL
     typedef eval::Parallel<Params> eval_t;
-#else
+    #else
     typedef eval::Eval<Params> eval_t;
-#endif*/
+    #endif*/
 
     //    typedef boost::fusion::vector<stat::Map<phen_t, Params>, stat::BestFit<phen_t, Params>,stat::Selection<phen_t,Params> > stat_t;
     //
 
     typedef modif::Dummy<> modifier_t;
+    
+    // Checking which container was selected for the experiment during compilation
+    #if defined(GRID)
+        typedef container::Grid<phen_t, Params> container_t;
+        //typedef boost::fusion::vector<stat::Map<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
 
-#if defined(GRID)
-    typedef container::Grid<phen_t, Params> container_t;
-    //typedef boost::fusion::vector<stat::Map<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
-
-#else // ARCHIVE
-    typedef container::Archive<phen_t, Params> container_t;
-    //typedef boost::fusion::vector<stat::Archive<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
-    //typedef boost::fusion::vector<stat::Archive<phen_t, Params>, stat::Selection<phen_t,Params> > stat_t;
-#endif
+    #else // ARCHIVE
+        typedef container::Archive<phen_t, Params> container_t;
+        //typedef boost::fusion::vector<stat::Archive<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
+        //typedef boost::fusion::vector<stat::Archive<phen_t, Params>, stat::Selection<phen_t,Params> > stat_t;
+    #endif
 
     typedef boost::fusion::vector<stat::Container<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
 
-#if defined(RANDOM)
-    typedef selector::Random<phen_t> select_t;
-#elif defined(FITNESS)
-    typedef selector::ScoreProportionate<phen_t,selector::getFitness> select_t;
-#elif defined(NOVELTY)
-    typedef selector::ScoreProportionate<phen_t,selector::getNovelty> select_t;
-#elif defined(CURIOSITY)
-    typedef selector::ScoreProportionate<phen_t,selector::getCuriosity> select_t;
-#elif defined(POPFITNESS)
-    typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getFitness> > select_t;
-#elif defined(POPNOVELTY)
-    typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getNovelty> > select_t;
-#elif defined(POPCURIOSITY)
-    typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getCuriosity> > select_t;
-#elif defined(TOURFITNESS)
-    typedef selector::TournamentBased<phen_t,selector::getFitness> select_t;
-#elif defined(TOURNOVELTY)
-    typedef selector::TournamentBased<phen_t,selector::getNovelty> select_t;
-#elif defined(TOURCURIOSITY)
-    typedef selector::TournamentBased<phen_t,selector::getCuriosity> select_t;
-#elif defined(PARETO) //NSLC
-    typedef selector::ParetoBased<phen_t,boost::fusion::vector<selector::getNovelty,selector::getLocalQuality>, Params > select_t;
-#else // NOSELECTION
-    typedef selector::NoSelection<phen_t> select_t;
+    // Checking the type of selector chosen for the experiment during compilation
+    #if defined(RANDOM)
+        typedef selector::Random<phen_t> select_t;
+    #elif defined(FITNESS)
+        typedef selector::ScoreProportionate<phen_t,selector::getFitness> select_t;
+    #elif defined(NOVELTY)
+        typedef selector::ScoreProportionate<phen_t,selector::getNovelty> select_t;
+    #elif defined(CURIOSITY)
+        typedef selector::ScoreProportionate<phen_t,selector::getCuriosity> select_t;
+    #elif defined(POPFITNESS)
+        typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getFitness> > select_t;
+    #elif defined(POPNOVELTY)
+        typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getNovelty> > select_t;
+    #elif defined(POPCURIOSITY)
+        typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getCuriosity> > select_t;
+    #elif defined(TOURFITNESS)
+        typedef selector::TournamentBased<phen_t,selector::getFitness> select_t;
+    #elif defined(TOURNOVELTY)
+        typedef selector::TournamentBased<phen_t,selector::getNovelty> select_t;
+    #elif defined(TOURCURIOSITY)
+        typedef selector::TournamentBased<phen_t,selector::getCuriosity> select_t;
+    #elif defined(PARETO) //NSLC
+        typedef selector::ParetoBased<phen_t,boost::fusion::vector<selector::getNovelty,selector::getLocalQuality>, Params > select_t;
+    #else // NOSELECTION
+        typedef selector::NoSelection<phen_t> select_t;
 
-#endif
+    #endif
 
     typedef ea::QualityDiversity<phen_t, eval_t, stat_t, modifier_t, select_t, container_t, Params> ea_t;
 

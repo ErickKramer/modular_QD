@@ -26,7 +26,10 @@ namespace robot{
          */
         for(size_t i=0;i<a.size();i++){
             Eigen::Matrix4d submat;
-            submat<<cos(a(i)), -sin(a(i)), 0, _l_arm(i), sin(a(i)), cos(a(i)), 0 , 0, 0, 0, 1, 0, 0, 0, 0, 1;
+            submat<<cos(a(i)), -sin(a(i)), 0, _l_arm(i), 
+                    sin(a(i)), cos(a(i)), 0 , 0, 
+                    0, 0, 1, 0, 
+                    0, 0, 0, 1;
             //mats.push_back(submat);
             mat=mat*submat;
         }
@@ -37,11 +40,14 @@ namespace robot{
         ||0|0|0|        1        ||
         */
         Eigen::Matrix4d submat;
-        submat<<1, 0, 0, _l_arm(a.size()), 0, 1, 0 , 0, 0, 0, 1, 0, 0, 0, 0, 1; // IF ROBOT NOT DIVIDE BY 2 else: // divide by 2 the last segment to get is CoM position. 
+        submat<<1, 0, 0, _l_arm(a.size()), 
+                0, 1, 0 , 0, 
+                0, 0, 1, 0, 
+                0, 0, 0, 1; // IF ROBOT NOT DIVIDE BY 2 else: // divide by 2 the last segment to get is CoM position. 
         //mats.push_back(submat);
         mat=mat*submat;
         Eigen::VectorXd v=mat*Eigen::Vector4d(0,0,0,1);
 
-        return v.head(3);
+        return v.head(3); // Return the first 3 coefficients
     }
 }
