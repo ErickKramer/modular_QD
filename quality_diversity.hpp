@@ -51,147 +51,125 @@
 #include <sferes/ea/ea.hpp>
 #include <sferes/fit/fitness.hpp>
 
-namespace sferes
-{
-  namespace ea
-  {
+namespace sferes{
+    namespace ea{
     
-    // Main class
-    template<typename Phen, typename Eval, typename Stat, typename FitModifier, typename Select, typename Container , typename Params, typename Exact = stc::Itself>
-    class QualityDiversity : public ea::Ea < Phen, Eval, Stat, FitModifier, Params,typename stc::FindExact<QualityDiversity<Phen, Eval, Stat, FitModifier,Select, Container , Params, Exact>, Exact>::ret >
-    {
-    public:
-      typedef boost::shared_ptr<Phen> indiv_t;
-      typedef typename std::vector<indiv_t> pop_t;
-      typedef typename pop_t::iterator it_t;
-      typedef typename std::vector<std::vector<indiv_t> > front_t;
+        // Main class
+        template<typename Phen, typename Eval, typename Stat, typename FitModifier, typename Select, typename Container , typename Params, typename Exact = stc::Itself>
+        class QualityDiversity : public ea::Ea < Phen, Eval, Stat, FitModifier, Params,typename stc::FindExact<QualityDiversity<Phen, Eval, Stat, FitModifier,Select, Container , Params, Exact>, Exact>::ret >
+        {
+            public:
+                typedef boost::shared_ptr<Phen> indiv_t;
+                typedef typename std::vector<indiv_t> pop_t;
+                typedef typename pop_t::iterator it_t;
+                typedef typename std::vector<std::vector<indiv_t> > front_t;
       
-      typedef boost::shared_ptr<Phen> phen_t;
+                typedef boost::shared_ptr<Phen> phen_t;
       
-      static const size_t behav_dim = Params::ea::behav_dim;
-      //typedef boost::array<float, behav_dim> point_t;
-      
-      
-      QualityDiversity(){}
+                static const size_t behav_dim = Params::ea::behav_dim;
+                //typedef boost::array<float, behav_dim> point_t;
+    
+                QualityDiversity(){}
+                
+                // Random initialization of _parents and _offspring
+                void random_pop(){
+                    parallel::init();
+                    _offspring.resize(Params::pop::size);
+                    BOOST_FOREACH(boost::shared_ptr<Phen>&indiv, this->_offspring){
+                        indiv = boost::shared_ptr<Phen>(new Phen());
+                        indiv->random();
+                    }
 
+                    this->_eval_pop(this->_offspring, 0, this->_offspring.size());
+                    this->apply_modifier();
+                    _add(_parents,_parents);
 
+                    this->_parents=this->_offspring;
+                    _offspring.resize(Params::pop::size);
 
-      
-      // Random initialization of _parents and _offspring
-      void random_pop()
-      {
-	parallel::init();
-	_offspring.resize(Params::pop::size);
-	BOOST_FOREACH(boost::shared_ptr<Phen>&indiv, this->_offspring)
-	  {
-	    indiv = boost::shared_ptr<Phen>(new Phen());
-	    indiv->random();
-	  }
-	
-	this->_eval_pop(this->_offspring, 0, this->_offspring.size());
-	this->apply_modifier();
-	_add(_parents,_parents);
+                    BOOST_FOREACH(boost::shared_ptr<Phen>&indiv, this->_offspring){
+                        indiv = boost::shared_ptr<Phen>(new Phen());
+                        indiv->random();
+                    }
 
-	this->_parents=this->_offspring;
-	_offspring.resize(Params::pop::size);
+                    this->_eval_pop(this->_offspring, 0, this->_offspring.size());
+                    this->apply_modifier();
+                    _add(_offspring,_offspring);
 
-	BOOST_FOREACH(boost::shared_ptr<Phen>&indiv, this->_offspring)
-	  {
-	    indiv = boost::shared_ptr<Phen>(new Phen());
-	    indiv->random();
-	  }
-	
-	this->_eval_pop(this->_offspring, 0, this->_offspring.size());
-	this->apply_modifier();
-	_add(_offspring,_offspring);
-	
-	this->_pop.clear();
-	_container.get_full_content(this->_pop);
-      }
+                    this->_pop.clear();
+                    _container.get_full_content(this->_pop);
+                }
       
 
-      // Main Iteration of the QD algorithm
-      void epoch()
-      {
-	// Selection of the parents
-	_select(_parents,*this);
-	_offspring.clear();       //CLEAR _offspring and _parents ONLY after Select, as it can be used by Select
+                // Main Iteration of the QD algorithm
+                void epoch(){
+                    // Selection of the parents
+                    _select(_parents,*this);
+                    _offspring.clear();       //CLEAR _offspring and _parents ONLY after Select, as it can be used by Select
 
-	// Generation of the offspring
-	std::vector<size_t> a;
-	misc::rand_ind(a, _parents.size());
-	for (size_t i = 0; i < Params::pop::size; i+=2)
-	  {	    
-	    boost::shared_ptr<Phen> i1, i2;
-	    _parents[a[i]]->cross(_parents[a[i+1]], i1, i2);
-	    i1->mutate();
-	    i2->mutate();
-	    i1->develop();
-	    i2->develop();
-	    _offspring.push_back(i1);
-	    _offspring.push_back(i2);
-	  }
+                    // Generation of the offspring
+                    std::vector<size_t> a;
+                    misc::rand_ind(a, _parents.size());
+                    for (size_t i = 0; i < Params::pop::size; i+=2){	    
+                        boost::shared_ptr<Phen> i1, i2;
+                        _parents[a[i]]->cross(_parents[a[i+1]], i1, i2);
+                        i1->mutate();
+                        i2->mutate();
+                        i1->develop();
+                        i2->develop();
+                        _offspring.push_back(i1);
+                        _offspring.push_back(i2);
+                    }
 
-	// Evaluation of the offspring
-	this->_eval_pop(_offspring, 0, _offspring.size());
-	this->apply_modifier();
+                    // Evaluation of the offspring
+                    this->_eval_pop(_offspring, 0, _offspring.size());
+                    this->apply_modifier();
 
-	// Addition of the offspring to the container
-	_add(_offspring,_parents);
-	
-	assert(_offspring.size() == _parents.size());
-	
-	this->_pop.clear();
+                    // Addition of the offspring to the container
+                    _add(_offspring,_parents);
 
-	// Copy of the containt of the container into the _pop object.
-	_container.get_full_content(this->_pop);
-      }
-      
-      
-      const Container& container()const {return _container;}
-      const pop_t& pop()const {return this->_pop;}
-      const pop_t& offspring()const {return _offspring;}
-      const pop_t& parents()const {return _parents;}
-      const std::vector<bool>& added()const {return _added;}
-      
-      
-      
-    protected:
+                    assert(_offspring.size() == _parents.size());
 
+                    this->_pop.clear();
 
-      // Add the offspring into the container and update the score of the individuals from the container and both of the sub population (offspring and parents)
-      void _add(pop_t& pop_off,  pop_t& pop_parents)
-      {
-	_added.resize(pop_off.size());
-	for (size_t i = 0; i < pop_off.size(); ++i)
-	  _added[i]=_add_to_container(pop_off[i], pop_parents[i]);
-	_container.update(pop_off, pop_parents);
-      }
+                    // Copy of the containt of the container into the _pop object.
+                    _container.get_full_content(this->_pop);
+                }
       
+                const Container& container()const {return _container;}
+                const pop_t& pop()const {return this->_pop;}
+                const pop_t& offspring()const {return _offspring;}
+                const pop_t& parents()const {return _parents;}
+                const std::vector<bool>& added()const {return _added;}
       
+            protected:
 
-      // add to the container procedure.
-      bool _add_to_container(indiv_t i1, indiv_t parent){
-	if( _container.add(i1,parent))
-	  {
-	    parent->fit().set_curiosity(parent->fit().curiosity()+1);
-	    return true;
-	  }
-	else
-	  {
-	    parent->fit().set_curiosity(parent->fit().curiosity()-0.5);
-	    return false;
-	  }
-      }
+                // Add the offspring into the container and update the score of the individuals from the container and both of the sub population (offspring and parents)
+                void _add(pop_t& pop_off,  pop_t& pop_parents){
+                    _added.resize(pop_off.size());
+                    for (size_t i = 0; i < pop_off.size(); ++i)
+                        _added[i]=_add_to_container(pop_off[i], pop_parents[i]);
+                    
+                    _container.update(pop_off, pop_parents);
+                }
       
+                // add to the container procedure.
+                bool _add_to_container(indiv_t i1, indiv_t parent){
+                    if( _container.add(i1,parent)){
+                        parent->fit().set_curiosity(parent->fit().curiosity()+1);
+                        return true;
+                    }else{
+                        parent->fit().set_curiosity(parent->fit().curiosity()-0.5);
+                        return false;
+                    }
+                }
       
+                Select _select;
+                Container _container;
       
-      Select _select;
-      Container _container;
-      
-      pop_t _offspring, _parents;
-      std::vector<bool> _added;
-    };
-  }
+                pop_t _offspring, _parents;
+                std::vector<bool> _added;
+        };
+    }
 }
 #endif
