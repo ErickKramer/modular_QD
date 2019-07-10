@@ -146,6 +146,8 @@ FIT_QD(ArmFit){
             std::vector<float> data = {(float) (pos[0]+L)/(2*L), (float) (pos[1]+L)/(2*L)};
             //this->set_desc(ind.gen().data(0), ind.gen().data(1));
             // Setting up the behavioral descriptor. Method defined in fit_qd.hpp
+            // BD is a 2D position inside a bounding box representing the configuration space of the 
+            // manipulator
             this->set_desc(data); 
         }
 };
