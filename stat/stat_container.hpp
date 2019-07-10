@@ -26,7 +26,7 @@ namespace sferes{
                                         + std::string(".dat"); // Name of the result file 
 
                     std::ofstream ofs(fname.c_str()); // Stream class to write files
-                    size_t offset = 0; 
+                    size_t offset = 0; // Variable used to represent the individual per row in the archive_xx.dat file 
                     ofs.precision(17); // Decimal precision for the next floating value insterted
                     for(auto it = ea.pop().begin(); it != ea.pop().end(); ++it){ // Iterate over the population
                         ofs << offset << "    ";
