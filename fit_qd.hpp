@@ -41,51 +41,48 @@
 
 #define FIT_QD(Name) SFERES_FITNESS(Name, sferes::fit::FitQD)
 
-namespace sferes
-{
-  namespace fit
-  {
-    SFERES_FITNESS(FitQD, sferes::fit::Fitness)
-    {
-      public:
-      FitQD() :
-	_dead(false),
-	_desc(Params::ea::behav_dim),
-	_novelty(-std::numeric_limits<double>::infinity()),
-	_curiosity(0),
-	_lq(0)
-      {}
+namespace sferes{
+    namespace fit{
+        SFERES_FITNESS(FitQD, sferes::fit::Fitness){
+            public:
+                FitQD() :
+                    _dead(false),
+                    _desc(Params::ea::behav_dim),
+                    _novelty(-std::numeric_limits<double>::infinity()),
+                    _curiosity(0),
+                    _lq(0)
+                {}
 
-      const std::vector<float>& desc() const { return _desc; }
-      double novelty()const {return _novelty;}
-      void set_novelty(double nov) {_novelty=nov;}
-      double curiosity()const {return _curiosity;}
-      void set_curiosity(double cur) {_curiosity=cur;}
+                const std::vector<float>& desc() const { return _desc; }
+                double novelty()const {return _novelty;}
+                void set_novelty(double nov) {_novelty=nov;}
+                
+                double curiosity()const {return _curiosity;}
+                void set_curiosity(double cur) {_curiosity=cur;}
 
-      double local_quality()const {return _lq;}
-      void set_local_quality(double lq) {_lq=lq;}
+                double local_quality()const {return _lq;}
+                void set_local_quality(double lq) {_lq=lq;}
       
-      void set_desc(std::vector<float> &x)
-      {
-	assert(x.size() == Params::ea::behav_dim);
-	/*for(size_t i = 0; i < x.size(); ++i)
-	  {
-	    assert(x[i] >= 0.0 && x[i] <= 1.0);
-	    }*/
-	_desc = x;
-      }
-      bool dead() const {return _dead;}
+                void set_desc(std::vector<float> &x){
+                    assert(x.size() == Params::ea::behav_dim);
+                    /*for(size_t i = 0; i < x.size(); ++i){
+                        assert(x[i] >= 0.0 && x[i] <= 1.0);
+                    }*/
+                    _desc = x;
+                }
+                
+                bool dead() const {return _dead;}
       
-      void set_value(float val){this->_value=val;}
+                void set_value(float val){this->_value=val;}
       
-    protected:
-      bool _dead;
-      std::vector<float> _desc;
-      double _novelty;
-      double _curiosity;
-      double _lq;
-    };
-  }
+            protected:
+                bool _dead;
+                std::vector<float> _desc;
+                double _novelty;
+                double _curiosity;
+                double _lq;
+        };
+    }
 }
 
 #endif
