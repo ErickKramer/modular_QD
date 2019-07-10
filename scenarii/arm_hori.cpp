@@ -1,6 +1,7 @@
 #include "arm_hori.hpp"
 namespace robot{
     Eigen::Vector3d Arm::forward_model(Eigen::VectorXd a){
+        // Computes the end effector position using the algebraic approach for forward kinematics
         Eigen::VectorXd _l_arm=Eigen::VectorXd(9);
         _l_arm(0)=0;
         _l_arm(1)=p1_height;
