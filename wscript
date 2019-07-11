@@ -84,8 +84,13 @@ def build(bld):
 
  
  
+     # bld.program(features='cxx cxxstlib',
+     #            source='scenarii/arm_hori.cpp',
+     #            includes='. .. ../../',
+     #            target='robot',
+     #            uselib=libs)
      bld.program(features='cxx cxxstlib',
-                 source='scenarii/arm_hori.cpp',
+                 source='scenarii/custom_arm.cpp',
                  includes='. .. ../../',
                  target='robot',
                  uselib=libs)
@@ -104,6 +109,14 @@ def build(bld):
                             includes='. .. ../../ ./scenarii/',
                             uselib = libs,
                             target = 'scenario_arm',
+                            variants = varts)
+ 
+     sferes.create_variants(bld,
+                            source = 'scenarii/scenario_simple_arm.cpp',
+                            use = 'sferes2 robot',
+                            includes='. .. ../../ ./scenarii/',
+                            uselib = libs,
+                            target = 'scenario_simple_arm',
                             variants = varts)
  
 
