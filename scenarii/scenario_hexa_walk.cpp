@@ -83,166 +83,146 @@
 using namespace sferes::gen::evo_float;
 
 
-struct Params
-{
+struct Params{
 
-  struct nov{
-    SFERES_CONST size_t deep=1;
-    SFERES_CONST size_t k=15;
-    SFERES_CONST double l=0.25;
-    SFERES_CONST double eps=0.1;
-    
-  };
-    struct ea
-    {
+    struct nov{
+        SFERES_CONST size_t deep=1;
+        SFERES_CONST size_t k=15;
+        SFERES_CONST double l=0.25;
+        SFERES_CONST double eps=0.1;
+    };
+
+    struct ea{
         /*SFERES_CONST size_t res_x = 256;
-      SFERES_CONST size_t res_y = 256;*/
+        SFERES_CONST size_t res_y = 256;*/
       
-      SFERES_CONST size_t behav_dim = 6;
-      SFERES_ARRAY(size_t, behav_shape, 5, 5,5,5,5,5);
+        SFERES_CONST size_t behav_dim = 6;
+        SFERES_ARRAY(size_t, behav_shape, 5, 5,5,5,5,5);
       
     };
-  struct pareto
-  {
-    SFERES_CONST bool genoDiv =true;
-  };
+
+    struct pareto{
+        SFERES_CONST bool genoDiv =true;
+    };
   
-    struct pop
-    {
+    struct pop{
       // number of initial random points
       //SFERES_CONST size_t init_size = 100;
       // size of a batch
-      SFERES_CONST size_t size = 200;
-      SFERES_CONST size_t nb_gen = 20001;
-      SFERES_CONST size_t dump_period = 500;
+        SFERES_CONST size_t size = 200;
+        SFERES_CONST size_t nb_gen = 20001;
+        SFERES_CONST size_t dump_period = 500;
     };
-    struct parameters
-    {
+    
+    struct parameters{
         SFERES_CONST float min = 0;
         SFERES_CONST float max = 1;
     };
 
-  struct sampled
-  {
-    SFERES_ARRAY(float, values,0,0.25,0.5,0.75,1)
-    SFERES_CONST float mutation_rate=0.05f;
-    SFERES_CONST float cross_rate = 0.00f;
-    SFERES_CONST bool ordered = true;
-  };
-
+    struct sampled{
+        SFERES_ARRAY(float, values,0,0.25,0.5,0.75,1)
+        SFERES_CONST float mutation_rate=0.05f;
+        SFERES_CONST float cross_rate = 0.00f;
+        SFERES_CONST bool ordered = true;
+    };
 };
 
 
 namespace global {
-  boost::shared_ptr<ode::Environment_hexa> env;
-  boost::shared_ptr<hexapod_robdyn::Hexapod> robot;
-  //std::shared_ptr<hexapod_dart::Hexapod> robot;
-
-
+    boost::shared_ptr<ode::Environment_hexa> env;
+    boost::shared_ptr<hexapod_robdyn::Hexapod> robot;
+    //std::shared_ptr<hexapod_dart::Hexapod> robot;
 }
 
-FIT_QD(HexaWalkFit)
-{
+FIT_QD(HexaWalkFit){
     public:
-    template<typename Indiv>
-      void eval(Indiv& ind, bool print=false)
-    {
-      this->_dead=false;
-      std::vector<double> ctrl(ind.size());
-      for (size_t i = 0; i < ind.size(); ++i)
-	{
-	  //std::cout<<i<<":"<<ind.data(i)<<"   ";
-	  ctrl[i] = ind.data(i);
-	}
-      //std::cout<<std::endl;
+        template<typename Indiv>
+        void eval(Indiv& ind, bool print=false){
+            this->_dead=false;
+            std::vector<double> ctrl(ind.size());
+            for (size_t i = 0; i < ind.size(); ++i){
+                //std::cout<<i<<":"<<ind.data(i)<<"   ";
+                ctrl[i] = ind.data(i);
+            }
+            
+            //std::cout<<std::endl;
 
-      //auto local_robot=global::robot->clone();
-      //std::shared_ptr<hexapod_dart::Hexapod> local_robot = std::make_shared<hexapod_dart::Hexapod>(global::filename, global::brk);
+            //auto local_robot=global::robot->clone();
+            //std::shared_ptr<hexapod_dart::Hexapod> local_robot = std::make_shared<hexapod_dart::Hexapod>(global::filename, global::brk);
       
-      //using desc_t = boost::fusion::vector<>;
-      //hexapod_dart::HexapodDARTSimu<hexapod_dart::desc<desc_t>> simu(ctrl, local_robot);
+            //using desc_t = boost::fusion::vector<>;
+            //hexapod_dart::HexapodDARTSimu<hexapod_dart::desc<desc_t>> simu(ctrl, local_robot);
 
-      hexapod_robdyn::HexapodRobdynSimu simu(ctrl, global::robot);
-      simu.controller().set_parameters(ctrl);
+            hexapod_robdyn::HexapodRobdynSimu simu(ctrl, global::robot);
+            simu.controller().set_parameters(ctrl);
 
-      simu.run(3);
+            simu.run(3);
 
-      if(simu.covered_distance()<-1000 || simu.covered_distance() > 1.5) //sanity check
-	{
-	  this->_dead=true;
-	  if(print)
-            {
-	      std::cout<<"DEAD"<<std::endl;
-	    }
-	  return;
-	}
-      else
-	{
-	  std::vector<float> data(6,0);
-	  for(int i=0;i<6;i++)
-	    data[i]=((float) std::accumulate(simu.get_contact(i).begin(), simu.get_contact(i).end(), 0))/simu.get_contact(i).size();
-	  
-	  this->set_desc(data);
+            if(simu.covered_distance() < -1000 || simu.covered_distance() > 1.5){
+                this->_dead=true;
+                if(print){
+                    std::cout<<"DEAD"<<std::endl;
+                }
+                return;
+            }else{
+                std::vector<float> data(6,0);
+                for(int i=0;i<6;i++)
+                    data[i]=((float) std::accumulate(simu.get_contact(i).begin(), simu.get_contact(i).end(), 0))/simu.get_contact(i).size();
+  
+                this->set_desc(data);
 
-	  this->_value = simu.covered_distance();
-	  
-	  if(print)
-	    {
-	      std::cout<<"value: "<<this->_value<<std::endl;
-	      std::cout<<"data: ";
-	      for(int i=0;i<6;i++)	      
-		std::cout<<data[i]<<" ";
-	      std::cout<<std::endl;
-	    }
-	  
-
-
-	}
+                this->_value = simu.covered_distance();
+  
+                if(print){
+                    std::cout<<"value: "<<this->_value<<std::endl;
+                    std::cout<<"data: ";
+                    for(int i=0;i<6;i++)	      
+                        std::cout<<data[i]<<" ";
+                    
+                    std::cout<<std::endl;
+                }
+            }
       
-    //std::cout << simu.covered_distance() << " " << simu.arrival_angle() << std::endl;
-    //std::cout << simu.energy() << std::endl;
-    //std::vector<double> v;
-    //simu.get_descriptor<hexapod_dart::descriptors::DutyCycle>(v);
-    //for (size_t i = 0; i < v.size(); i++) {
-    //    std::cout << v[i] << " ";
-    //}
-    //std::cout << std::endl;
-    //std::vector<double> vv;
-    //simu.get_descriptor<hexapod_dart::descriptors::RotationTraj>(vv);
-    //for (size_t i = 0; i < vv.size(); i++) {
-    //    std::cout << vv[i] << " ";
-    //}
-    //std::cout << std::endl;
+            //std::cout << simu.covered_distance() << " " << simu.arrival_angle() << std::endl;
+            //std::cout << simu.energy() << std::endl;
+            //std::vector<double> v;
+            //simu.get_descriptor<hexapod_dart::descriptors::DutyCycle>(v);
+            //for (size_t i = 0; i < v.size(); i++) {
+            //    std::cout << v[i] << " ";
+            //}
+            //std::cout << std::endl;
+            //std::vector<double> vv;
+            //simu.get_descriptor<hexapod_dart::descriptors::RotationTraj>(vv);
+            //for (size_t i = 0; i < vv.size(); i++) {
+            //    std::cout << vv[i] << " ";
+            //}
+            //std::cout << std::endl;
 
-    }
-
+        }
 };
 
-    using namespace sferes;
+using namespace sferes;
     typedef HexaWalkFit<Params> fit_t;
     typedef gen::Sampled<36, Params> gen_t;
     typedef phen::Parameters<gen_t, fit_t, Params> phen_t;
 
-void run_behavior(int narg, char ** varg)
-{
-  std::cout<<"run behavior"<<std::endl;
-  phen_t indiv;
-  assert(narg>=indiv.gen().size()+2);
-  std::cout<<"narg "<<narg <<" indiv.gen "<<  indiv.gen().size()<<std::endl;
-  for (size_t i = 0; i < indiv.gen().size(); ++i)
-    {
-      std::cout<<i<<":"<<varg[i+1]<<"   ";
-      indiv.gen().set_data(i,std::atof(varg[i+1])*4);
-      std::cout<<indiv.gen().data(i)<<"   "<<std::endl;
+void run_behavior(int narg, char ** varg){
+    std::cout<<"run behavior"<<std::endl;
+    phen_t indiv;
+    assert(narg>=indiv.gen().size()+2);
+    std::cout<<"narg "<<narg <<" indiv.gen "<<  indiv.gen().size()<<std::endl;
+    for (size_t i = 0; i < indiv.gen().size(); ++i){
+        std::cout<<i<<":"<<varg[i+1]<<"   ";
+        indiv.gen().set_data(i,std::atof(varg[i+1])*4);
+        std::cout<<indiv.gen().data(i)<<"   "<<std::endl;
     }
   
-  indiv.develop();
-  indiv.fit().eval(indiv,true);
+    indiv.develop();
+    indiv.fit().eval(indiv,true);
 }
 
 
-int main(int narg, char ** varg)
-{
+int main(int narg, char ** varg){
     srand (time(NULL));
   
     tbb::task_scheduler_init init(20);
@@ -261,43 +241,38 @@ int main(int narg, char ** varg)
     int stab = 0;
     for (size_t s = 0; s < 1000 && !stabilized; ++s) {
 
-      Eigen::Vector3d prev_pos = global::robot->pos();
-      global::robot->next_step(step);
-      global::env->next_step(step);
+        Eigen::Vector3d prev_pos = global::robot->pos();
+        global::robot->next_step(step);
+        global::env->next_step(step);
 
-      if ((global::robot->pos() - prev_pos).norm() < 1e-4)
-	stab++;
-      else
-	stab = 0;
-      if (stab > 100)
-	stabilized = true;
+        if ((global::robot->pos() - prev_pos).norm() < 1e-4)
+            stab++;
+        else
+            stab = 0;
+            if (stab > 100)
+                stabilized = true;
     }
+        /*if(narg<2)
+        {
+        std::cout<< "Please provide path to urdf file"<<std::endl;
+        return -1;
+        }*/
 
-
-
-
-
-    /*if(narg<2)
-    {
-      std::cout<< "Please provide path to urdf file"<<std::endl;
-      return -1;
-      }*/
-
-      
-    //std::vector<int> brk={};
-    // global::robot = std::make_shared<hexapod_dart::Hexapod>(varg[1], brk);
+        
+        //std::vector<int> brk={};
+        // global::robot = std::make_shared<hexapod_dart::Hexapod>(varg[1], brk);
      
-if(narg>2){
-      run_behavior(narg, varg);
-      return 0;
-     }
+    if(narg>2){
+        run_behavior(narg, varg);
+        return 0;
+    }
 
     typedef eval::Parallel<Params> eval_t;
     /*#ifndef NO_PARALLEL
-    typedef eval::Parallel<Params> eval_t;
-#else
-    typedef eval::Eval<Params> eval_t;
-#endif*/
+        typedef eval::Parallel<Params> eval_t;
+    #else
+        typedef eval::Eval<Params> eval_t;
+    #endif*/
 
     //    typedef boost::fusion::vector<stat::Map<phen_t, Params>, stat::BestFit<phen_t, Params>,stat::Selection<phen_t,Params> > stat_t;
     //
@@ -305,46 +280,42 @@ if(narg>2){
     typedef modif::Dummy<> modifier_t;
 
 
-#if defined(GRID)
-    typedef container::Grid<phen_t, Params> container_t;
-    //typedef boost::fusion::vector<stat::Map<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
+    #if defined(GRID)
+        typedef container::Grid<phen_t, Params> container_t;
+        //typedef boost::fusion::vector<stat::Map<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
+    #else // ARCHIVE
+        typedef container::Archive<phen_t, Params> container_t;
+        //typedef boost::fusion::vector<stat::Archive<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
+        //typedef boost::fusion::vector<stat::Archive<phen_t, Params>, stat::Selection<phen_t,Params> > stat_t;
+    #endif
+        typedef boost::fusion::vector<stat::Container<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
 
-#else // ARCHIVE
-    typedef container::Archive<phen_t, Params> container_t;
-    //typedef boost::fusion::vector<stat::Archive<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
-    //typedef boost::fusion::vector<stat::Archive<phen_t, Params>, stat::Selection<phen_t,Params> > stat_t;
-#endif
+    #if defined(RANDOM)
+        typedef selector::Random<phen_t> select_t;
+    #elif defined(FITNESS)
+        typedef selector::ScoreProportionate<phen_t,selector::getFitness> select_t;
+    #elif defined(NOVELTY)
+        typedef selector::ScoreProportionate<phen_t,selector::getNovelty> select_t;
+    #elif defined(CURIOSITY)
+        typedef selector::ScoreProportionate<phen_t,selector::getCuriosity> select_t;
+    #elif defined(POPFITNESS)
+        typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getFitness> > select_t;
+    #elif defined(POPNOVELTY)
+        typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getNovelty> > select_t;
+    #elif defined(POPCURIOSITY)
+        typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getCuriosity> > select_t;
+    #elif defined(TOURFITNESS)
+        typedef selector::TournamentBased<phen_t,selector::getFitness> select_t;
+    #elif defined(TOURNOVELTY)
+        typedef selector::TournamentBased<phen_t,selector::getNovelty> select_t;
+    #elif defined(TOURCURIOSITY)
+        typedef selector::TournamentBased<phen_t,selector::getCuriosity> select_t;
+    #elif defined(PARETO) //NSLC
+        typedef selector::ParetoBased<phen_t,boost::fusion::vector<selector::getNovelty,selector::getLocalQuality>, Params > select_t;
+    #else // NOSELECTION
+        typedef selector::NoSelection<phen_t> select_t;
 
-    typedef boost::fusion::vector<stat::Container<phen_t, Params>,stat::Progress<phen_t, Params> > stat_t;
-
-
-
-#if defined(RANDOM)
-    typedef selector::Random<phen_t> select_t;
-#elif defined(FITNESS)
-    typedef selector::ScoreProportionate<phen_t,selector::getFitness> select_t;
-#elif defined(NOVELTY)
-    typedef selector::ScoreProportionate<phen_t,selector::getNovelty> select_t;
-#elif defined(CURIOSITY)
-    typedef selector::ScoreProportionate<phen_t,selector::getCuriosity> select_t;
-#elif defined(POPFITNESS)
-    typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getFitness> > select_t;
-#elif defined(POPNOVELTY)
-    typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getNovelty> > select_t;
-#elif defined(POPCURIOSITY)
-    typedef selector::PopulationBased<phen_t, selector::ScoreProportionate<phen_t, selector::getCuriosity> > select_t;
-#elif defined(TOURFITNESS)
-    typedef selector::TournamentBased<phen_t,selector::getFitness> select_t;
-#elif defined(TOURNOVELTY)
-    typedef selector::TournamentBased<phen_t,selector::getNovelty> select_t;
-#elif defined(TOURCURIOSITY)
-    typedef selector::TournamentBased<phen_t,selector::getCuriosity> select_t;
-#elif defined(PARETO) //NSLC
-    typedef selector::ParetoBased<phen_t,boost::fusion::vector<selector::getNovelty,selector::getLocalQuality>, Params > select_t;
-#else // NOSELECTION
-    typedef selector::NoSelection<phen_t> select_t;
-
-#endif
+    #endif
 
     typedef ea::QualityDiversity<phen_t, eval_t, stat_t, modifier_t, select_t, container_t, Params> ea_t;
 
