@@ -110,7 +110,7 @@ struct Params{
     };
 
     struct parameters{
-        SFERES_CONST float min = -1; // Limits of the phenotype parameters
+        SFERES_CONST float min = -1; // Limits of the genotype parameters
         SFERES_CONST float max = 1;
     };
 
@@ -119,7 +119,7 @@ struct Params{
         SFERES_CONST float mutation_rate = 0.125f;
         SFERES_CONST float eta_m = 10.0f; // Parameter for the polynomial mutation
         SFERES_CONST float eta_c = 10.0f; // Parameter for the polynomial mutation
-        SFERES_CONST mutation_t mutation_type = polynomial; // Type of polynomial
+        SFERES_CONST mutation_t mutation_type = polynomial; // Type of mutation
         SFERES_CONST cross_over_t cross_over_type = sbx; // Type of cross-over
     };
 
@@ -128,8 +128,8 @@ struct Params{
 
 
 FIT_QD(ArmFit){
-    // Minimizing the variance of the angular position of the joints. 
-    // Captures the idea that all the joints of the arm should contribute equally to 
+    // Minimizing the variance of the angular position of the joints.
+    // Captures the idea that all the joints of the arm should contribute equally to
     // the movement
     public:
         template<typename Indiv>
@@ -137,7 +137,7 @@ FIT_QD(ArmFit){
             Eigen::VectorXd angle(ind.size());
             for (size_t i = 0; i < ind.size(); ++i)
                 angle[i] = ind.data(i)*M_PI/2; // Constraint the joint angles between [-pi/2, pi/2]
-            
+
             this->_value = - sqrt((angle.array()-angle.mean()).square().mean());
 
             Eigen::Vector3d pos=robot::Arm::forward_model(angle); // Get the position of the end effector
@@ -147,15 +147,15 @@ FIT_QD(ArmFit){
             std::vector<float> data = {(float) (pos[0]+L)/(2*L), (float) (pos[1]+L)/(2*L)};
             //this->set_desc(ind.gen().data(0), ind.gen().data(1));
             // Setting up the behavioral descriptor. Method defined in fit_qd.hpp
-            // BD is a 2D position inside a bounding box representing the configuration space of the 
+            // BD is a 2D position inside a bounding box representing the configuration space of the
             // manipulator
-            this->set_desc(data); 
+            this->set_desc(data);
         }
 };
 
 int main(){
     srand(time(NULL));
-    tbb::task_scheduler_init init(20);  
+    tbb::task_scheduler_init init(20);
 
     using namespace sferes;
 
@@ -173,7 +173,7 @@ int main(){
     //
 
     typedef modif::Dummy<> modifier_t;
-    
+
     // Checking which container was selected for the experiment during compilation
     #if defined(GRID)
         typedef container::Grid<phen_t, Params> container_t;
