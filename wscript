@@ -121,19 +121,19 @@ def build(bld):
  
 
      if(bld.env.DEFINES_ROBDYN == 'USE_ROBDYN'):
-         sferes.create_variants(bld,
-                                source = 'scenarii/scenario_hexa_turn.cpp',
-                                use = 'sferes2',
-                                uselib = libs,
-                                target = 'scenario_hexa_turn',
-                                variants = varts)
-         
-         sferes.create_variants(bld,
-                                source = 'scenarii/scenario_hexa_walk.cpp',
-                                use = 'sferes2',
-                                uselib = libs,
-                                target = 'scenario_hexa_walk',
-                                variants = varts) 
+       sferes.create_variants(bld,
+                                   source = 'scenarii/scenario_hexa_turn.cpp',
+                                   use = 'sferes2',
+                                   uselib = libs,
+                                   target = 'scenario_hexa_turn',
+                                   variants = varts)
+              
+       sferes.create_variants(bld,
+                                   source = 'scenarii/scenario_hexa_walk.cpp',
+                                   use = 'sferes2',
+                                   uselib = libs,
+                                   target = 'scenario_hexa_walk',
+                                   variants = varts) 
  
  
  
