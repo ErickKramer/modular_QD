@@ -84,15 +84,15 @@ def build(bld):
 
  
  
-     # bld.program(features='cxx cxxstlib',
-     #            source='scenarii/arm_hori.cpp',
-     #            includes='. .. ../../',
-     #            target='robot',
-     #            uselib=libs)
+     bld.program(features='cxx cxxstlib',
+                source='scenarii/arm_hori.cpp',
+                includes='. .. ../../',
+                target='robot',
+                uselib=libs)
      bld.program(features='cxx cxxstlib',
                  source='scenarii/custom_arm.cpp',
                  includes='. .. ../../',
-                 target='robot',
+                 target='custom_robot',
                  uselib=libs)
                  
      varts=['GRID RANDOM','GRID NOSELECTION', 'GRID PARETO',
@@ -113,7 +113,7 @@ def build(bld):
  
      sferes.create_variants(bld,
                             source = 'scenarii/scenario_simple_arm.cpp',
-                            use = 'sferes2 robot',
+                            use = 'sferes2 custom_robot',
                             includes='. .. ../../ ./scenarii/',
                             uselib = libs,
                             target = 'scenario_simple_arm',
