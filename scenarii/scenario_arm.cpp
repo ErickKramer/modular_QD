@@ -138,6 +138,7 @@ FIT_QD(ArmFit){
             for (size_t i = 0; i < ind.size(); ++i)
                 angle[i] = ind.data(i)*M_PI/2; // Constraint the joint angles between [-pi/2, pi/2]
 
+            // Calculations done based on the formula to compute the variance (statistics)
             this->_value = - sqrt((angle.array()-angle.mean()).square().mean());
 
             Eigen::Vector3d pos=robot::Arm::forward_model(angle); // Get the position of the end effector
