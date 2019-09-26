@@ -120,11 +120,11 @@ def build(bld):
                             variants = varts)
  
      sferes.create_variants(bld,
-                            source = 'scenarii/scenario_schunk.cpp',
+                            source = 'scenarii/scenario_arm_l_1.cpp',
                             use = 'sferes2',
                             includes='. .. ../../ ./scenarii/',
                             uselib = libs,
-                            target = 'scenario_schunk',
+                            target = 'scenario_arm_l_1',
                             variants = varts)
 
      if(bld.env.DEFINES_ROBDYN == 'USE_ROBDYN'):
