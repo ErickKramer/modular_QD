@@ -70,6 +70,30 @@ def configure(conf):
     conf.check_hexapod_robdyn_simu()
     conf.check_robot_dart()
 
+    conf.env['lib_type'] = 'cxxstlib'
+    if conf.options.build_shared:
+        conf.env['lib_type'] = 'cxxshlib'
+
+    if conf.env.CXX_NAME in ["icc", "icpc"]:
+        common_flags = "-Wall -std=c++11"
+        opt_flags = " -O3 -xHost -unroll -g "
+    elif conf.env.CXX_NAME in ["clang"]:
+        common_flags = "-Wall -std=c++11"
+        opt_flags = " -O3 -g -faligned-new "
+    else:
+        gcc_version = int(conf.env['CC_VERSION'][0]+conf.env['CC_VERSION'][1])
+        if gcc_version < 47:
+            common_flags = "-Wall -std=c++0x"
+        else:
+            common_flags = "-Wall -std=c++11"
+        opt_flags = " -O3 -g "
+        if gcc_version >= 71:
+            opt_flags = opt_flags + " -faligned-new"
+
+    all_flags = common_flags + opt_flags
+    conf.env['CXXFLAGS'] = conf.env['CXXFLAGS'] + all_flags.split(' ')
+    print(conf.env['CXXFLAGS'])
+
 
 def build(bld):
      
