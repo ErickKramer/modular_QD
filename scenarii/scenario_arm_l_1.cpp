@@ -138,7 +138,7 @@ int main(int argc, char **argv){
     std::string name = "schunk arm";
     double time_step = 0.001;
 
-    arm_dart::SchunkArm simu(urdf_path, packages,time_step,name); 
+    arm_dart::SchunkArm simu(urdf_path, packages,name); 
     return 0;
     // -----------------------------------------------------------
     // QD Definition

@@ -44,7 +44,7 @@ from waflib.Configure import conf
 
 import robdyn
 import hexapod_controller
-
+import robot_dart
 
 
 def options(opt) : 
@@ -52,7 +52,7 @@ def options(opt) :
     opt.load('robdyn')
     opt.load('hexapod_controller')
     opt.load('hexapod_robdyn_simu')
-
+    opt.load('robot_dart')
 
         
 
@@ -63,15 +63,17 @@ def configure(conf):
     conf.load('robdyn')
     conf.load('hexapod_controller')
     conf.load('hexapod_robdyn_simu')
+    conf.load('robot_dart')
     conf.check_ode()
     conf.check_robdyn()
     conf.check_hexapod_controller()
     conf.check_hexapod_robdyn_simu()
+    conf.check_robot_dart()
 
 
 def build(bld):
      
-     libs = 'HEXAPOD_ROBDYN_SIMU HEXAPOD_CONTROLLER ROBDYN ODE  EIGEN BOOST BOOST_UNIT_TEST_FRAMEWORK  BOOST_TIMER TBB '
+     libs = 'ROBOT_DART HEXAPOD_ROBDYN_SIMU HEXAPOD_CONTROLLER ROBDYN ODE  EIGEN BOOST BOOST_UNIT_TEST_FRAMEWORK  BOOST_TIMER TBB '
      
      print ("Entering directory `" + os.getcwd() + "/modules/'")
 

@@ -30,6 +30,7 @@ def check_robot_dart(conf):
     	res = res and conf.find_file('robot_dart/graphics/camera_osr.hpp', includes_check)
     	res = res and conf.find_file('robot_dart/graphics/graphics.hpp', includes_check)
     	res = res and conf.find_file('robot_dart/graphics/pbuffer_manager.hpp', includes_check)
+    	res = res and conf.find_file('robot_dart/arm/arm_simulation.hpp', includes_check)
     	conf.end_msg('ok')
     	conf.env.INCLUDES_ROBOT_DART = includes_check
     except:
