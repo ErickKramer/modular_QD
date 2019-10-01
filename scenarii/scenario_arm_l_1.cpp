@@ -133,12 +133,24 @@ int main(int argc, char **argv){
     // -----------------------------------------------------------
     // Defining URDF 
     std::vector<std::pair<std::string, std::string>> packages = {{"lwa4d",
-        cur_path.parent_path().string() + "robot_dart/res/models/meshes/lwa4d"}};
-    std::string urdf_path = "res/models/schunk_with_pg70.urdf";
+        cur_path.parent_path().string() + "/robot_dart/res/models/meshes/lwa4d"}};
+    std::string urdf_path = cur_path.parent_path().string()+
+        "/robot_dart/res/models/schunk_with_pg70.urdf";
     std::string name = "schunk arm";
     double time_step = 0.001;
 
     arm_dart::SchunkArm simu(urdf_path, packages,name); 
+    simu.init_simu(time_step);
+    std::string pid_file_path = cur_path.parent_path().string()+
+        "/robot_dart/res/pid_params.txt";
+    simu.init_controller(pid_file_path);
+    simu.set_acceleration_limits(0.01);
+    std::vector<std::string> descriptors = {"joint_states", "pose_states", "velocity_states"};
+    simu.set_descriptors(descriptors);
+    simu.display_robot_info();
+    double simulation_time = 10.;
+    simu.run_simu(simulation_time/4.);
+
     return 0;
     // -----------------------------------------------------------
     // QD Definition
