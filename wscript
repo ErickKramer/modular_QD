@@ -42,33 +42,34 @@ print sys.path[0]
 from waflib.Configure import conf
 
 
-import robdyn
-import hexapod_controller
+# import robdyn
+# import hexapod_controller
 import robot_dart
 
 
 def options(opt) : 
-    opt.load('ode')
-    opt.load('robdyn')
-    opt.load('hexapod_controller')
-    opt.load('hexapod_robdyn_simu')
+    # opt.load('ode')
+    # opt.load('robdyn')
+    # opt.load('hexapod_controller')
+    # opt.load('hexapod_robdyn_simu')
     opt.load('robot_dart')
 
         
 
 @conf
 def configure(conf): 
-    print 'conf exp:'
-    conf.load('ode')
-    conf.load('robdyn')
-    conf.load('hexapod_controller')
-    conf.load('hexapod_robdyn_simu')
     conf.load('robot_dart')
-    conf.check_ode()
-    conf.check_robdyn()
-    conf.check_hexapod_controller()
-    conf.check_hexapod_robdyn_simu()
+    print 'About to configure robot_dart '
     conf.check_robot_dart()
+    print 'Finished configuring robot_dart'
+    # conf.load('ode')
+    # conf.load('robdyn')
+    # conf.load('hexapod_controller')
+    # conf.load('hexapod_robdyn_simu')
+    # conf.check_robdyn()
+    # conf.check_ode()
+    # conf.check_hexapod_controller()
+    # conf.check_hexapod_robdyn_simu()
 
     conf.env['lib_type'] = 'cxxstlib'
     if conf.options.build_shared:
@@ -97,7 +98,7 @@ def configure(conf):
 
 def build(bld):
      
-     libs = 'ROBOT_DART HEXAPOD_ROBDYN_SIMU HEXAPOD_CONTROLLER ROBDYN ODE  EIGEN BOOST BOOST_UNIT_TEST_FRAMEWORK  BOOST_TIMER TBB '
+     libs = 'ROBOT_DART HEXAPOD_ROBDYN_SIMU HEXAPOD_CONTROLLER ROBDYN ODE  EIGEN BOOST BOOST_UNIT_TEST_FRAMEWORK  BOOST_TIMER TBB'
      
      print ("Entering directory `" + os.getcwd() + "/modules/'")
 
@@ -108,8 +109,6 @@ def build(bld):
                  use = 'sferes2',
                  target = 'test_qd')
 
- 
- 
      bld.program(features='cxx cxxstlib',
                 source='scenarii/arm_hori.cpp',
                 includes='. .. ../../',
@@ -149,7 +148,7 @@ def build(bld):
                             source = 'scenarii/scenario_arm_l_1.cpp',
                             use = 'sferes2',
                             includes='. .. ../../ ./scenarii/',
-                            uselib = libs,
+                            uselib = 'BOOST EIGEN DART ROBOT_DART TBB DART_GRAPHIC',
                             target = 'scenario_arm_l_1',
                             variants = varts)
 
