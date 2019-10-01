@@ -33,7 +33,6 @@
 // TODO: Include schunk_arm 
 #include <robot_dart/arm/arm_simulation.hpp>
 // #include <robot_dart/robot_dart_simu.hpp>
-
 using namespace sferes;
 using namespace sferes::gen::evo_float;
 
@@ -131,25 +130,48 @@ int main(int argc, char **argv){
     // -----------------------------------------------------------
     // Simulation Definition
     // -----------------------------------------------------------
-    // Defining URDF 
+    // Loading URDF 
     std::vector<std::pair<std::string, std::string>> packages = {{"lwa4d",
         cur_path.parent_path().string() + "/robot_dart/res/models/meshes/lwa4d"}};
     std::string urdf_path = cur_path.parent_path().string()+
         "/robot_dart/res/models/schunk_with_pg70.urdf";
     std::string name = "schunk arm";
-    double time_step = 0.001;
 
+    // Load simulation
     arm_dart::SchunkArm simu(urdf_path, packages,name); 
+
+    // Initialize simulation
+    double time_step = 0.001;
     simu.init_simu(time_step);
+
+    // Initialize PID controller 
     std::string pid_file_path = cur_path.parent_path().string()+
         "/robot_dart/res/pid_params.txt";
     simu.init_controller(pid_file_path);
+
+    // Set Acceleration limits
     simu.set_acceleration_limits(0.01);
+
+    // Specify desired descriptors
     std::vector<std::string> descriptors = {"joint_states", "pose_states", "velocity_states"};
     simu.set_descriptors(descriptors);
+
+    // Display robot_info
     simu.display_robot_info();
+
+    // Run simulation
     double simulation_time = 10.;
     simu.run_simu(simulation_time/4.);
+
+    // Reset descriptors 
+    simu.reset_descriptors(descriptors);
+
+    // Set a new configuration
+    std::vector<double> conf(simu.get_control_dofs(), 0.0);
+    conf[1] = M_PI_2;
+    simu.set_goal_configuration(conf);
+    simu.run_simu(simulation_time);
+    simu.reset_descriptors(descriptors);
 
     return 0;
     // -----------------------------------------------------------
