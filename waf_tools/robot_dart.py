@@ -1,61 +1,103 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 # encoding: utf-8
-# Erick Kramer- 2019
-
+#|
+#|    Copyright (C) 2019 Learning Algorithms and Systems Laboratory, EPFL, Switzerland
+#|    Author/Maintainer:  Konstantinos Chatzilygeroudis
+#|    email:   konstantinos.chatzilygeroudis@epfl.ch
+#|    website: lasa.epfl.ch
+#|
+#|    This file is part of whc.
+#|
+#|    whc is free software: you can redistribute it and/or modify
+#|    it under the terms of the GNU General Public License as published by
+#|    the Free Software Foundation, either version 3 of the License, or
+#|    (at your option) any later version.
+#|
+#|    whc is distributed in the hope that it will be useful,
+#|    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#|    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#|    GNU General Public License for more details.
+#|
 """
 Quick n dirty robot_dart detection
 """
+
 import os
-import boost
-import eigen
-import dart
+from waflib import Utils, Logs
 from waflib.Configure import conf
-from waflib.Tools import waf_unit_test
+
 
 def options(opt):
-    opt.load('compiler_cxx')
-    opt.load('compiler_c')
-    # opt.load('boost')
-    opt.load('dart')
-    opt.add_option('--robot_dart', type='string', help='path to robot_dart', dest='robot_dart')
+  opt.add_option('--robot_dart', type='string', help='path to robot_dart', dest='robot_dart')
+
 
 @conf
-def check_robot_dart(conf):
-    # conf.load('boost')
-    # conf.load('eigen')
-    # conf.load('dart')
-    # conf.load('avx')
+def check_robot_dart(conf, *k, **kw):
+    def get_directory(filename, dirs):
+        res = conf.find_file(filename, dirs)
+        return res[:-len(filename)-1]
 
-    # conf.check_boost(lib='regex system filesystem unit_test_framework', min_version='1.46')
-    conf.check_dart()
+    required = kw.get('required', False)
 
-    includes_check = ['/usr/local/include/robot_dart', '/usr/include/robot_dart']
+    msg = ''
+    if not required:
+        msg = ' [optional]'
+
+    includes_check = ['/usr/local/include', '/usr/include']
     libs_check = ['/usr/local/lib', '/usr/lib']
 
+    # OSX/Mac uses .dylib and GNU/Linux .so
+    lib_suffix = 'dylib' if conf.env['DEST_OS'] == 'darwin' else 'so'
+
+    # # You can customize where you want to check
+    # # e.g. here we search also in a folder defined by an environmental variable
+    # if 'RESIBOTS_DIR' in os.environ:
+    # 	includes_check = [os.environ['RESIBOTS_DIR'] + '/include'] + includes_check
+    # 	libs_check = [os.environ['RESIBOTS_DIR'] + '/lib'] + libs_check
+
     if conf.options.robot_dart:
-        includes_check = [conf.options.robot_dart + '/include/robot_dart']
+        includes_check = [conf.options.robot_dart + '/include']
         libs_check = [conf.options.robot_dart + '/lib']
+
     try:
-        conf.start_msg('Checking for robot_dart includes')
-        res = conf.find_file('robot.hpp', includes_check)
-        res = res and conf.find_file('robot_dart_simu.hpp', includes_check)
-        res = res and conf.find_file('utils.hpp', includes_check)
-        res = res and conf.find_file('control/pid_control.hpp', includes_check)
-        res = res and conf.find_file('descriptor/base_descriptor.hpp', includes_check)
-        res = res and conf.find_file('graphics/base_graphics.hpp', includes_check)
-        res = res and conf.find_file('graphics/camera_osr.hpp', includes_check)
-        res = res and conf.find_file('graphics/graphics.hpp', includes_check)
-        res = res and conf.find_file('graphics/pbuffer_manager.hpp', includes_check)
-        res = res and conf.find_file('arm/arm_simulation.hpp', includes_check)
-        conf.end_msg('ok')
-        conf.start_msg('Checking for robot dart lib')
-        res = res and conf.find_file('libRobotDARTSimu.a', libs_check)
-        conf.end_msg('ok')
-        conf.env.INCLUDES_ROBOT_DART = includes_check
-        conf.env.LIBPATH_ROBOT_DART = libs_check
+        conf.start_msg('Checking for robot_dart includes' + msg)
+        dirs = []
+        dirs.append(get_directory('robot_dart/robot.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/control/robot_control.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/robot_dart_simu.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/descriptor/base_descriptor.hpp', includes_check))
+
+        # remove duplicates
+        dirs = list(set(dirs))
+
+        conf.end_msg(dirs)
+        conf.env.INCLUDES_ROBOT_DART = dirs
+
+        # Add graphics flag
         conf.env.DEFINES_ROBOT_DART = ['GRAPHIC']
-        conf.env.LIB_ROBOT_DART = ['RobotDARTSimu']
+
+        conf.start_msg('Checking for robot_dart library' + msg)
+        libs_ext = ['.a', lib_suffix]
+        lib_found = False
+        type_lib = '.a'
+        for lib in libs_ext:
+            try:
+                lib_dir = get_directory('libRobotDARTSimu' + lib, libs_check)
+                lib_found = True
+                type_lib = lib
+                break
+            except:
+                lib_found = False
+        conf.end_msg('libRobotDARTSimu' + type_lib)
+
+        conf.env.LIBPATH_ROBOT_DART = lib_dir
+        if type_lib == '.a':
+            conf.env.STLIB_ROBOT_DART = 'RobotDARTSimu'
+        else:
+            conf.env.LIB_ROBOT_DART = 'RobotDARTSimu'
     except:
+        if required:
+            conf.fatal('Not found')
         conf.end_msg('Not found', 'RED')
         return
     return 1

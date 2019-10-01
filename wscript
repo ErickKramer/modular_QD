@@ -45,6 +45,7 @@ from waflib.Configure import conf
 # import robdyn
 # import hexapod_controller
 import robot_dart
+import dart
 
 
 def options(opt) : 
@@ -53,15 +54,14 @@ def options(opt) :
     # opt.load('hexapod_controller')
     # opt.load('hexapod_robdyn_simu')
     opt.load('robot_dart')
-
-        
+    opt.load('dart')
 
 @conf
 def configure(conf): 
+    conf.load('dart')
     conf.load('robot_dart')
-    print 'About to configure robot_dart '
-    conf.check_robot_dart()
-    print 'Finished configuring robot_dart'
+    conf.check_dart()
+    conf.check_robot_dart(required=True)
     # conf.load('ode')
     # conf.load('robdyn')
     # conf.load('hexapod_controller')
