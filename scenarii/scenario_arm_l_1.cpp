@@ -37,9 +37,9 @@ using namespace sferes;
 using namespace sferes::gen::evo_float;
 
 // Create a global namespace
-// namespace global{
-//     robot_dart::RobotDARTSimu simu;
-// }
+namespace global{
+    std::shared_ptr<arm_dart::SchunkArm> simu;
+}
 
 // TODO: Tune QD Parameters
 struct Params{
@@ -88,13 +88,38 @@ FIT_QD(AngularVariance){
     // variance between the angular position of the joints. 
     // Captures the idea that all the joints of the arm should contribute equally to the movement
 
-    // public:
-    //     template<typename Indiv>
-    //     void eval(Indiv& ind){
-    //         Eigen::VectorXd angles_joints(ind.size()); // Declaration of the angles_joints vector
-    //         for(size_t i = 0; i < ind.size(); ++i){
-    //             angles_joints[i] = ind.data(i) * M_PI/2; // Constraint the values between [-pi/2, pi/2]
-    //         }
+    public:
+        template<typename Indiv>
+        void eval(Indiv& ind){
+
+            // Set individual as target configuration
+            std::vector<double> angles_joints(ind.size(), 0.0);
+            Eigen::VectorXd pos_limits = global::simu->get_positions_upper_limits();
+            for(size_t i = 0; i < ind.size(); ++i){
+                // Constraint the joints angles to the corresponding position limits
+                angles_joints[i] = ind.data(i) * pos_limits[i]; 
+            }
+            global::simu->set_goal_configuration(angles_joints);
+
+            // Run simulation 
+            global::simu->run_simu(10.);
+
+            // Collect recorded data 
+            double total_movement = global::simu->get_total_joints_motion();
+            double total_torque = global::simu->get_total_torque();
+            double total_steps = global::simu->get_total_steps();
+            Eigen::VectorXd end_effector_pose = global::simu->get_final_pose();
+
+            // Computes joints variance
+            // double joints_variance = sqrt((angles_joints.array() - angles_joints.mean()).square().mean());
+
+            // Computes fitness
+            this -> _value = - total_movement;
+
+            // Computes behavioral descriptor
+            Eigen::Vector3d end_position = end_effector_pose.head(3);
+
+            // TODO: Normalize position
 
     //         this -> _value = - sqrt((angles_joints.array() - angles_joints.mean()).square().mean());
 
@@ -107,7 +132,7 @@ FIT_QD(AngularVariance){
             
     //         this -> set_desc(data); // Pass the behavioral descriptor corresponding to a position in a 2D space.
 
-    //     }
+        }
 };
 
 int main(int argc, char **argv){
@@ -120,11 +145,11 @@ int main(int argc, char **argv){
         return errno;
     }
     // cCurrentPath[sizeof(cCurrentPath)-1] = '\0';
-    std::cout<<"Current working directory is " << cCurrentPath << std::endl;
+    // std::cout<<"Current working directory is " << cCurrentPath << std::endl;
     boost::filesystem::path cur_path = cCurrentPath;
 
     // Print info 
-    std::cout << "parent path  " << cur_path.parent_path() << std::endl;
+    // std::cout << "parent path  " << cur_path.parent_path() << std::endl;
 
 
     // -----------------------------------------------------------
@@ -138,52 +163,62 @@ int main(int argc, char **argv){
     std::string name = "schunk arm";
 
     // Load simulation
-    arm_dart::SchunkArm simu(urdf_path, packages,name); 
+    global::simu = std::make_shared<arm_dart::SchunkArm>(urdf_path, packages, name);
+    // arm_dart::SchunkArm simu(urdf_path, packages,name); 
 
     // Initialize simulation
     double time_step = 0.001;
-    simu.init_simu(time_step);
+    global::simu->init_simu(time_step);
 
     // Initialize PID controller 
     std::string pid_file_path = cur_path.parent_path().string()+
         "/robot_dart/res/pid_params.txt";
-    simu.init_controller(pid_file_path);
+    global::simu->init_controller(pid_file_path);
 
     // Set Acceleration limits
-    simu.set_acceleration_limits(0.01);
+    global::simu->set_acceleration_limits(0.01);
 
     // Specify desired descriptors
     std::vector<std::string> descriptors = {"joint_states", "pose_states", "velocity_states"};
-    simu.set_descriptors(descriptors);
+    global::simu->set_descriptors(descriptors);
 
     // Display robot_info
-    simu.display_robot_info();
+    global::simu->display_robot_info();
 
     // Run simulation
-    double simulation_time = 10.;
-    simu.run_simu(simulation_time/4.);
+    // double simulation_time = 10.;
+    // global::simu->run_simu(simulation_time/4.);
 
     // Reset descriptors 
-    simu.reset_descriptors(descriptors);
+    // simu.reset_descriptors(descriptors);
 
     // Set a new configuration
-    std::vector<double> conf(simu.get_control_dofs(), 0.0);
-    conf[1] = M_PI_2;
-    simu.set_goal_configuration(conf);
-    simu.run_simu(simulation_time);
-    simu.reset_descriptors(descriptors);
+    // std::vector<double> conf(simu.get_control_dofs(), 0.0);
+    // conf[1] = M_PI_2;
+    // simu.set_goal_configuration(conf);
+    // simu.run_simu(simulation_time);
+    // simu.reset_descriptors(descriptors);
 
-    return 0;
     // -----------------------------------------------------------
     // QD Definition
     // -----------------------------------------------------------
 
-    std::string results_name = "schunk_L1_experiment";
+    // Name of the results_file
+    std::string results_name = "schunk_l1_experiment";
 
+    // Define fitness function
     typedef AngularVariance<Params> fit_t; // Fitness function for the algorithm 
+
+    // Define evaluation type
     typedef eval::Parallel<Params> eval_t;
+
+    // Define genotype
     typedef gen::EvoFloat<Params::ea::genotype_dimensions, Params> gen_t;
+
+    // Define phenotype
     typedef phen::Parameters<gen_t, fit_t, Params> phen_t;
+
+    // Define modifier
     typedef modif::Dummy<> modifier_t;
 
     // Containers definition
