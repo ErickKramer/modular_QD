@@ -186,8 +186,10 @@ int main(int argc, char **argv){
     global::simu->display_robot_info();
 
     // Run simulation
-    // double simulation_time = 10.;
-    // global::simu->run_simu(simulation_time/4.);
+    double simulation_time = 10.;
+    global::simu->run_simu(simulation_time/4.);
+
+    return 0;
 
     // Reset descriptors 
     // simu.reset_descriptors(descriptors);
