@@ -62,10 +62,16 @@ def check_robot_dart(conf, *k, **kw):
     try:
         conf.start_msg('Checking for robot_dart includes' + msg)
         dirs = []
-        dirs.append(get_directory('robot_dart/robot.hpp', includes_check))
-        dirs.append(get_directory('robot_dart/control/robot_control.hpp', includes_check))
-        dirs.append(get_directory('robot_dart/robot_dart_simu.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/arm/arm_simulation.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/control/pid_control.hpp', includes_check))
         dirs.append(get_directory('robot_dart/descriptor/base_descriptor.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/graphics/base_graphics.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/graphics/camera_osr.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/graphics/graphics.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/graphics/pbuffer_manager.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/robot.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/robot_dart_simu.hpp', includes_check))
+        dirs.append(get_directory('robot_dart/utils.hpp', includes_check))
 
         # remove duplicates
         dirs = list(set(dirs))

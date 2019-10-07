@@ -39,6 +39,7 @@ using namespace sferes::gen::evo_float;
 // Create a global namespace
 namespace global{
     std::shared_ptr<arm_dart::SchunkArm> simu;
+    std::vector<std::string> descriptors;
 }
 
 // TODO: Tune QD Parameters
@@ -94,10 +95,12 @@ FIT_QD(AngularVariance){
 
             // Set individual as target configuration
             std::vector<double> angles_joints(ind.size(), 0.0);
+            Eigen::VectorXd angles(ind.size());
             Eigen::VectorXd pos_limits = global::simu->get_positions_upper_limits();
             for(size_t i = 0; i < ind.size(); ++i){
                 // Constraint the joints angles to the corresponding position limits
                 angles_joints[i] = ind.data(i) * pos_limits[i]; 
+                angles[i] = ind.data(i) * pos_limits[i];
             }
             global::simu->set_goal_configuration(angles_joints);
 
@@ -111,50 +114,45 @@ FIT_QD(AngularVariance){
             Eigen::VectorXd end_effector_pose = global::simu->get_final_pose();
 
             // Computes joints variance
-            // double joints_variance = sqrt((angles_joints.array() - angles_joints.mean()).square().mean());
+            double joints_variance = sqrt((angles.array() - angles.mean()).square().mean());
 
             // Computes fitness
             this -> _value = - total_movement;
 
             // Computes behavioral descriptor
-            Eigen::Vector3d end_position = end_effector_pose.head(3);
+            Eigen::Vector3d end_effector_position = end_effector_pose.head(3);
 
-            // TODO: Normalize position
+            // Get arm_length
+            // Normalize position to a bounding box similar to Cully2018_2
+            float length = global::simu->get_total_length() * 1.1;
 
-    //         this -> _value = - sqrt((angles_joints.array() - angles_joints.mean()).square().mean());
+            std::vector<float> data = {(float) (end_effector_position[0] + length) / (2 * length),
+                                       (float) (end_effector_position[1] + length) / (2 * length),
+                                       (float) (end_effector_position[2] + length) / (2 * length)};
 
-    //         Eigen::Vector3d position = robot::CustomArm::forward_model(angles_joints); // Get the position of the end effector
-
-    //         float total_length = robot::CustomArm::max_length() * 1.1; // Normalized the values to a bounding box with values between 0 and 1
-
-    //         std::vector<float> data = {(float) (position[0] + total_length) / (2 * total_length),
-    //                                    (float) (position[1] + total_length) / (2 * total_length) };
-            
-    //         this -> set_desc(data); // Pass the behavioral descriptor corresponding to a position in a 2D space.
+            // Set behavioral descriptor to a 3D position
+            this -> set_desc(data); 
 
         }
 };
 
 int main(int argc, char **argv){
-    srand(time(NULL)); // Ensures the generation of random numbers by having a different seed 
-    tbb::task_scheduler_init init(20); // Used to controll the task scheduler inside the Thread Building Block
+    // Ensures the generation of random numbers by having a different seed 
+    srand(time(NULL)); 
+    // Used to controll the task scheduler inside the Thread Building Block
+    tbb::task_scheduler_init init(20); 
 
+    // -----------------------------------------------------------
+    // Simulation Definition
+    // -----------------------------------------------------------
     // Get Working directory
     char cCurrentPath[FILENAME_MAX];
     if (!GetCurrentDir(cCurrentPath, sizeof(cCurrentPath))){
         return errno;
     }
     // cCurrentPath[sizeof(cCurrentPath)-1] = '\0';
-    // std::cout<<"Current working directory is " << cCurrentPath << std::endl;
     boost::filesystem::path cur_path = cCurrentPath;
 
-    // Print info 
-    // std::cout << "parent path  " << cur_path.parent_path() << std::endl;
-
-
-    // -----------------------------------------------------------
-    // Simulation Definition
-    // -----------------------------------------------------------
     // Loading URDF 
     std::vector<std::pair<std::string, std::string>> packages = {{"lwa4d",
         cur_path.parent_path().string() + "/robot_dart/res/models/meshes/lwa4d"}};
@@ -163,42 +161,41 @@ int main(int argc, char **argv){
     std::string name = "schunk arm";
 
     // Load simulation
+    std::cout << "Initializing simulation " << std::endl;
     global::simu = std::make_shared<arm_dart::SchunkArm>(urdf_path, packages, name);
-    // arm_dart::SchunkArm simu(urdf_path, packages,name); 
 
     // Initialize simulation
     double time_step = 0.001;
     global::simu->init_simu(time_step);
 
     // Initialize PID controller 
+    std::cout << "Initializing controller " << std::endl;
     std::string pid_file_path = cur_path.parent_path().string()+
         "/robot_dart/res/pid_params.txt";
+    std::cout << "PID file path " << pid_file_path << std::endl;
     global::simu->init_controller(pid_file_path);
 
     // Set Acceleration limits
+    std::cout << "Set acceleration limits " << std::endl;
     global::simu->set_acceleration_limits(0.01);
 
-    // Specify desired descriptors
-    std::vector<std::string> descriptors = {"joint_states", "pose_states", "velocity_states"};
-    global::simu->set_descriptors(descriptors);
+    // Specify simulation descriptors
+    std::cout << "Setting descriptors " << std::endl;
+    global::descriptors = {"joint_states", "pose_states", "velocity_states"};
+    global::simu->set_descriptors(global::descriptors);
 
     // Display robot_info
     global::simu->display_robot_info();
-
+    return 0; 
     // Run simulation
-    // double simulation_time = 10.;
-    // global::simu->run_simu(simulation_time/4.);
-
-    // Reset descriptors 
-    // simu.reset_descriptors(descriptors);
-
-    // Set a new configuration
-    // std::vector<double> conf(simu.get_control_dofs(), 0.0);
-    // conf[1] = M_PI_2;
-    // simu.set_goal_configuration(conf);
-    // simu.run_simu(simulation_time);
-    // simu.reset_descriptors(descriptors);
-
+    double simulation_time = 10.;
+    std::vector<double> conf(global::simu->get_control_dofs(), 0.0);
+    conf[1] = M_PI_2;
+    global::simu->set_goal_configuration(conf);
+    global::simu->run_simu(simulation_time);
+    global::simu->reset_descriptors(global::descriptors);
+    std::cout << "Pose of the end effector \n " << global::simu->get_final_pose().transpose() << std::endl;
+    return 0; 
     // -----------------------------------------------------------
     // QD Definition
     // -----------------------------------------------------------
