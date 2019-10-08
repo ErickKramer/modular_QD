@@ -40,12 +40,13 @@ print sys.path[0]
 
 
 from waflib.Configure import conf
-
+from waflib import Logs
 
 # import robdyn
 # import hexapod_controller
 import robot_dart
 import dart
+import avx
 
 
 def options(opt) : 
@@ -60,8 +61,28 @@ def options(opt) :
 def configure(conf): 
     conf.load('dart')
     conf.load('robot_dart')
+    conf.load('avx')
+
     conf.check_dart()
     conf.check_robot_dart(required=True)
+
+    Logs.info('Checking AVX for dart and robot dart ')    
+    avx_dart = conf.check_avx(lib='dart', required=['dart','dart-utils', 'dart-utils-urdf'])
+    avx_robot_dart = conf.check_avx(lib='robot_dart', required=['RobotDartSimu'], lib_type='static')
+
+    native = ''
+    native_icc = ''
+    Logs.info('Setting native')
+    if avx_dart and avx_robot_dart:
+        conf.msg('-march=native (AVX support)', 'yes', color='GREEN')
+        native = '-march=native'
+        native_icc = 'mtune=native'
+    else:
+        if avx_dart or avx_robot_dart:
+            conf.msg('-march=native (AVX support)', 'no -- some libraries are compiled \
+                with avx and others not; programs may not run ', color='RED')
+        else:
+            conf.msg('-march=native (AVX support)', 'no (optional)', color='YELLOW')
     # conf.load('ode')
     # conf.load('robdyn')
     # conf.load('hexapod_controller')
@@ -71,27 +92,28 @@ def configure(conf):
     # conf.check_hexapod_controller()
     # conf.check_hexapod_robdyn_simu()
 
+    Logs.info('Adding new compilation flags')
     conf.env['lib_type'] = 'cxxstlib'
-    if conf.options.build_shared:
-        conf.env['lib_type'] = 'cxxshlib'
 
     if conf.env.CXX_NAME in ["icc", "icpc"]:
         common_flags = "-Wall -std=c++11"
-        opt_flags = " -O3 -xHost -unroll -g "
+        opt_flags = " -O3 -xHost -unroll -g " + native_icc
     elif conf.env.CXX_NAME in ["clang"]:
         common_flags = "-Wall -std=c++11"
-        opt_flags = " -O3 -g -faligned-new "
+        opt_flags = " -O3 -g -faligned-new " + native
     else:
         gcc_version = int(conf.env['CC_VERSION'][0]+conf.env['CC_VERSION'][1])
         if gcc_version < 47:
             common_flags = "-Wall -std=c++0x"
         else:
             common_flags = "-Wall -std=c++11"
-        opt_flags = " -O3 -g "
+        opt_flags = " -O3 -g " + native
         if gcc_version >= 71:
             opt_flags = opt_flags + " -faligned-new"
 
     all_flags = common_flags + opt_flags
+    Logs.info('Modular QD Flags')
+    Logs.info(all_flags)
     conf.env['CXXFLAGS'] = conf.env['CXXFLAGS'] + all_flags.split(' ')
     print(conf.env['CXXFLAGS'])
 
