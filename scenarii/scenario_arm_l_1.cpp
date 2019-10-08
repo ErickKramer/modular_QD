@@ -160,9 +160,10 @@ int main(int argc, char **argv){
     std::string urdf_path = cur_path.parent_path().string()+
         "/robot_dart/res/models/schunk_with_pg70.urdf";
     std::string name = "schunk arm";
+    std::string end_effector_name = "end_virtual_link";
 
     // Create simulation
-    global::simu = std::make_shared<arm_dart::SchunkArm>(urdf_path, packages, name);
+    global::simu = std::make_shared<arm_dart::SchunkArm>(urdf_path, packages, name, end_effector_name);
 
     // Initialize simulation
     double time_step = 0.001;
