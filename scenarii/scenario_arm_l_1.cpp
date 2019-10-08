@@ -6,15 +6,15 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <boost/filesystem.hpp>
-#define GetCurrentDir getcwd 
+#define GetCurrentDir getcwd
 
-#include <boost/foreach.hpp> 
-#include <boost/multi_array.hpp> 
-#include <boost/array.hpp> 
-#include <boost/fusion/algorithm/iteration/for_each.hpp> 
-#include <boost/fusion/include/for_each.hpp> 
+#include <boost/foreach.hpp>
+#include <boost/multi_array.hpp>
+#include <boost/array.hpp>
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/fusion/include/for_each.hpp>
 
-#include <Eigen/Core> 
+#include <Eigen/Core>
 
 #include <sferes/eval/parallel.hpp> // Multicore evaluator
 #include <sferes/gen/evo_float.hpp> // Genotype of real (float) numbers
@@ -30,8 +30,9 @@
 #include "container.hpp" // Includes the header files for the containers
 #include "stat.hpp" // Include the header files for the different statistical methods
 
-// TODO: Include schunk_arm 
+// TODO: Include schunk_arm
 #include <robot_dart/arm/arm_simulation.hpp>
+
 // #include <robot_dart/robot_dart_simu.hpp>
 using namespace sferes;
 using namespace sferes::gen::evo_float;
@@ -58,7 +59,7 @@ struct Params{
 
         // Parameters for the evolutionary algorithm
         SFERES_CONST size_t behav_dim = 2; // Dimensions of the behavioral descriptor (Name expected by other files)
-        SFERES_ARRAY(size_t, behav_shape, 100, 100); // Dimensions of the grid 
+        SFERES_ARRAY(size_t, behav_shape, 100, 100); // Dimensions of the grid
         SFERES_CONST size_t genotype_dimensions = 8;
     };
 
@@ -85,8 +86,8 @@ struct Params{
 };
 
 FIT_QD(AngularVariance){
-    // Fitness that measures the performance of the behaviors in terms of minimizing the 
-    // variance between the angular position of the joints. 
+    // Fitness that measures the performance of the behaviors in terms of minimizing the
+    // variance between the angular position of the joints.
     // Captures the idea that all the joints of the arm should contribute equally to the movement
 
     public:
@@ -99,15 +100,15 @@ FIT_QD(AngularVariance){
             Eigen::VectorXd pos_limits = global::simu->get_positions_upper_limits();
             for(size_t i = 0; i < ind.size(); ++i){
                 // Constraint the joints angles to the corresponding position limits
-                angles_joints[i] = ind.data(i) * pos_limits[i]; 
+                angles_joints[i] = ind.data(i) * pos_limits[i];
                 angles[i] = ind.data(i) * pos_limits[i];
             }
             global::simu->set_goal_configuration(angles_joints);
 
-            // Run simulation 
+            // Run simulation
             global::simu->run_simu(10.);
 
-            // Collect recorded data 
+            // Collect recorded data
             double total_movement = global::simu->get_total_joints_motion();
             double total_torque = global::simu->get_total_torque();
             double total_steps = global::simu->get_total_steps();
@@ -131,16 +132,16 @@ FIT_QD(AngularVariance){
                                        (float) (end_effector_position[2] + length) / (2 * length)};
 
             // Set behavioral descriptor to a 3D position
-            this -> set_desc(data); 
+            this -> set_desc(data);
 
         }
 };
 
 int main(int argc, char **argv){
-    // Ensures the generation of random numbers by having a different seed 
-    srand(time(NULL)); 
+    // Ensures the generation of random numbers by having a different seed
+    srand(time(NULL));
     // Used to controll the task scheduler inside the Thread Building Block
-    tbb::task_scheduler_init init(20); 
+    tbb::task_scheduler_init init(20);
 
     // -----------------------------------------------------------
     // Simulation Definition
@@ -153,40 +154,35 @@ int main(int argc, char **argv){
     // cCurrentPath[sizeof(cCurrentPath)-1] = '\0';
     boost::filesystem::path cur_path = cCurrentPath;
 
-    // Loading URDF 
+    // Loading URDF
     std::vector<std::pair<std::string, std::string>> packages = {{"lwa4d",
         cur_path.parent_path().string() + "/robot_dart/res/models/meshes/lwa4d"}};
     std::string urdf_path = cur_path.parent_path().string()+
         "/robot_dart/res/models/schunk_with_pg70.urdf";
     std::string name = "schunk arm";
 
-    // Load simulation
-    std::cout << "Initializing simulation " << std::endl;
+    // Create simulation
     global::simu = std::make_shared<arm_dart::SchunkArm>(urdf_path, packages, name);
 
     // Initialize simulation
     double time_step = 0.001;
     global::simu->init_simu(time_step);
 
-    // Initialize PID controller 
-    std::cout << "Initializing controller " << std::endl;
+    // Initialize PID controller
     std::string pid_file_path = cur_path.parent_path().string()+
         "/robot_dart/res/pid_params.txt";
-    std::cout << "PID file path " << pid_file_path << std::endl;
     global::simu->init_controller(pid_file_path);
 
     // Set Acceleration limits
-    std::cout << "Set acceleration limits " << std::endl;
     global::simu->set_acceleration_limits(0.01);
 
     // Specify simulation descriptors
-    std::cout << "Setting descriptors " << std::endl;
     global::descriptors = {"joint_states", "pose_states", "velocity_states"};
     global::simu->set_descriptors(global::descriptors);
 
     // Display robot_info
     global::simu->display_robot_info();
-    return 0; 
+    
     // Run simulation
     double simulation_time = 10.;
     std::vector<double> conf(global::simu->get_control_dofs(), 0.0);
@@ -195,7 +191,7 @@ int main(int argc, char **argv){
     global::simu->run_simu(simulation_time);
     global::simu->reset_descriptors(global::descriptors);
     std::cout << "Pose of the end effector \n " << global::simu->get_final_pose().transpose() << std::endl;
-    return 0; 
+    return 0;
     // -----------------------------------------------------------
     // QD Definition
     // -----------------------------------------------------------
@@ -204,7 +200,7 @@ int main(int argc, char **argv){
     std::string results_name = "schunk_l1_experiment";
 
     // Define fitness function
-    typedef AngularVariance<Params> fit_t; // Fitness function for the algorithm 
+    typedef AngularVariance<Params> fit_t; // Fitness function for the algorithm
 
     // Define evaluation type
     typedef eval::Parallel<Params> eval_t;
@@ -228,8 +224,8 @@ int main(int argc, char **argv){
     #endif
 
     // Definition of the statistical functions to be used
-    // Contains scripts to write the progress and archive files. 
-    typedef boost::fusion::vector<stat::Container<phen_t, Params>, stat::Progress<phen_t, Params> > stat_t; 
+    // Contains scripts to write the progress and archive files.
+    typedef boost::fusion::vector<stat::Container<phen_t, Params>, stat::Progress<phen_t, Params> > stat_t;
 
     // Selectors definition
     #if defined(RANDOM)
@@ -247,19 +243,19 @@ int main(int argc, char **argv){
     #else
         typedef selector::NoSelection<phen_t> selector_t;
         results_name.append("noselection_");
-    #endif 
+    #endif
 
     typedef ea::QualityDiversity<phen_t, eval_t, stat_t, modifier_t, selector_t, container_t, Params> ea_t;
 
     ea_t ea;
 
     std::cout << "===================================" << std::endl;
-    std::cout << " Starting experiment " << std::endl; 
+    std::cout << " Starting experiment " << std::endl;
     std::cout << "===================================" << std::endl;
 
     ea.run(results_name);
-    
+
     std::cout << "===================================" << std::endl;
-    std::cout << " Finishing experiment " << std::endl; 
+    std::cout << " Finishing experiment " << std::endl;
     std::cout << "===================================" << std::endl;
 }
