@@ -30,8 +30,8 @@
 #include "container.hpp" // Includes the header files for the containers
 #include "stat.hpp" // Include the header files for the different statistical methods
 
-// TODO: Include schunk_arm
 #include <robot_dart/arm/arm_simulation.hpp>
+#include <robot_dart/robot.hpp>
 
 // #include <robot_dart/robot_dart_simu.hpp>
 using namespace sferes;
@@ -39,9 +39,12 @@ using namespace sferes::gen::evo_float;
 
 // Create a global namespace
 namespace global{
-    std::shared_ptr<arm_dart::SchunkArm> simu;
+    // std::shared_ptr<arm_dart::SchunkArm> simu;
+    std::shared_ptr<robot_dart::Robot> global_robot;
     std::vector<std::string> descriptors;
     Eigen::VectorXd pos_limits;
+    std::string pid_file_path;
+    std::string end_effector_name;
 }
 
 // TODO: Tune QD Parameters
@@ -105,23 +108,35 @@ FIT_QD(FitPose){
                 if (i != ind.size() -1)
                     angles[i] = ind.data(i) * global::pos_limits[i];
             }
-
             // Force close gripper 
             angles_joints[7] = 0.; 
 
-            global::simu->set_goal_configuration(angles_joints);
+            // Launch simulation 
+            auto robot = global::global_robot->clone();
 
-            // Run simulation
-            global::simu->run_simu(10.);
+            arm_dart::SchunkArmSimu simu(angles_joints, robot, 0.001, global::end_effector_name);
+
+            simu.init_controller(global::pid_file_path);
+
+            simu.set_descriptors(global::descriptors);
+
+            // Sanity prints
+            std::cout << "Angles Joints size " <<angles_joints.size() << std::endl;
+            std::cout << "Angles: ";
+            for (auto a : angles_joints) std::cout << a << " ";
+            std::cout << std::endl;
+
+            simu.run_simu(10.);
+
 
             // Collect recorded data
-            double total_movement = global::simu->get_total_joints_motion();
+            double total_movement = simu.get_total_joints_motion();
             std::cout << "Total Movement " << total_movement << std::endl;
-            double total_torque = global::simu->get_total_torque();
+            double total_torque = simu.get_total_torque();
             std::cout << "Total torque " << total_torque << std::endl;
-            double total_steps = global::simu->get_total_steps();
+            double total_steps = simu.get_total_steps();
             std::cout << "Total steps " << total_steps << std::endl;
-            Eigen::VectorXd end_effector_pose = global::simu->get_final_pose();
+            Eigen::VectorXd end_effector_pose = simu.get_final_pose();
 
             // Computes joints variance
             double joints_variance = sqrt((angles.array() - angles.mean()).square().mean());
@@ -135,7 +150,7 @@ FIT_QD(FitPose){
 
             // Get arm_length
             // Normalize position to a bounding box similar to Cully2018_2
-            float length = global::simu->get_total_length() * 1.1;
+            float length = simu.get_total_length() * 1.1;
 
             std::vector<float> data = {(float) (end_effector_position[0] + length) / (2 * length),
                                        (float) (end_effector_position[1] + length) / (2 * length),
@@ -154,57 +169,51 @@ int main(int argc, char **argv){
     tbb::task_scheduler_init init(20);
 
     // -----------------------------------------------------------
-    // Simulation Definition
+    // Robot Definition
     // -----------------------------------------------------------
-    // Get Working directory
+    // Loading URDF
     char cCurrentPath[FILENAME_MAX];
     if (!GetCurrentDir(cCurrentPath, sizeof(cCurrentPath))){
         return errno;
     }
-    // cCurrentPath[sizeof(cCurrentPath)-1] = '\0';
     boost::filesystem::path cur_path = cCurrentPath;
-
-    // Loading URDF
     std::vector<std::pair<std::string, std::string>> packages = {{"lwa4d",
         cur_path.parent_path().string() + "/robot_dart/res/models/meshes/lwa4d"}};
     std::string urdf_path = cur_path.parent_path().string()+
         "/robot_dart/res/models/schunk_with_pg70.urdf";
     std::string name = "schunk arm";
-    std::string end_effector_name = "end_virtual_link";
+    global::end_effector_name = "end_virtual_link";
 
-    // Create simulation
-    global::simu = std::make_shared<arm_dart::SchunkArm>(urdf_path, packages, name, end_effector_name);
+    // Set PID params file path
+    global::pid_file_path = cur_path.parent_path().string() + "/robot_dart/res/pid_params.txt";
 
-    // Initialize simulation
-    double time_step = 0.001;
-    global::simu->init_simu(time_step);
+    // Create Robot
+    global::global_robot = std::make_shared<robot_dart::Robot>(urdf_path, packages,name); 
 
-    // Initialize PID controller
-    std::string pid_file_path = cur_path.parent_path().string()+
-        "/robot_dart/res/pid_params.txt";
-    global::simu->init_controller(pid_file_path);
-
-    // Set Acceleration limits
-    global::simu->set_acceleration_limits(0.01);
-
-    // Specify simulation descriptors
+    // Set simulation descriptors
     global::descriptors = {"joint_states", "pose_states", "velocity_states"};
-    global::simu->set_descriptors(global::descriptors);
 
-    // Display robot_info
-    global::simu->display_robot_info();
-    
-    // Get Position limits
-    global::pos_limits = global::simu->get_positions_upper_limits();
-    
-    // Run simulation
-    // double simulation_time = 10.;
-    // std::vector<double> conf(global::simu->get_control_dofs(), 0.0);
-    // conf[1] = M_PI_2;
-    // global::simu->set_goal_configuration(conf);
-    // global::simu->run_simu(simulation_time);
-    // global::simu->reset_descriptors(global::descriptors);
-    // std::cout << "Pose of the end effector \n " << global::simu->get_final_pose().transpose() << std::endl;
+    // Create a dummy simulation just to display info and get pos_limits 
+    std::vector<double> conf(8,0.);
+    // conf[0] = -0.71547;
+    // conf[1] = -0.699279;
+    // conf[2] = 2.07417;
+    // conf[3] = 1.28246;
+    // conf[4] = 2.18346;
+    // conf[5] = 0.25926;
+    // conf[6] = 1.27123;
+    // conf[5] = 0.;
+    arm_dart::SchunkArmSimu dummy_simu(conf, global::global_robot, 0.001, global::end_effector_name);
+    dummy_simu.display_robot_info();
+    global::pos_limits = dummy_simu.get_positions_upper_limits();
+
+    // dummy_simu.init_controller(global::pid_file_path);
+    // dummy_simu.set_descriptors(global::descriptors);
+    // dummy_simu.run_simu(10.);
+    // double total_steps = dummy_simu.get_total_steps();
+    // std::cout << "Total steps " << total_steps << std::endl;
+
+    // return 0;    
     // -----------------------------------------------------------
     // QD Definition
     // -----------------------------------------------------------
@@ -216,7 +225,8 @@ int main(int argc, char **argv){
     typedef FitPose<Params> fit_t; // Fitness function for the algorithm
 
     // Define evaluation type
-    typedef eval::Parallel<Params> eval_t;
+    // typedef eval::Parallel<Params> eval_t;
+    typedef eval::Eval<Params> eval_t;
 
     // Define genotype
     typedef gen::EvoFloat<Params::ea::genotype_dimensions, Params> gen_t;
