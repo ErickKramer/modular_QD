@@ -80,7 +80,7 @@ def check_robot_dart(conf, *k, **kw):
         conf.env.INCLUDES_ROBOT_DART = dirs
 
         # Add graphics flag
-        conf.env.DEFINES_ROBOT_DART = ['GRAPHIC']
+        # conf.env.DEFINES_ROBOT_DART = ['GRAPHIC']
 
         conf.start_msg('Checking for robot_dart library' + msg)
         libs_ext = ['.a', lib_suffix]
