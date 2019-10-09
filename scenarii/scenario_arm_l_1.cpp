@@ -41,6 +41,7 @@ using namespace sferes::gen::evo_float;
 namespace global{
     std::shared_ptr<arm_dart::SchunkArm> simu;
     std::vector<std::string> descriptors;
+    Eigen::VectorXd pos_limits;
 }
 
 // TODO: Tune QD Parameters
@@ -85,7 +86,7 @@ struct Params{
     };
 };
 
-FIT_QD(AngularVariance){
+FIT_QD(FitPose){
     // Fitness that measures the performance of the behaviors in terms of minimizing the
     // variance between the angular position of the joints.
     // Captures the idea that all the joints of the arm should contribute equally to the movement
@@ -95,14 +96,19 @@ FIT_QD(AngularVariance){
         void eval(Indiv& ind){
 
             // Set individual as target configuration
-            std::vector<double> angles_joints(ind.size(), 0.0);
-            Eigen::VectorXd angles(ind.size());
-            Eigen::VectorXd pos_limits = global::simu->get_positions_upper_limits();
+            std::vector<double> angles_joints(ind.size());
+            Eigen::VectorXd angles(ind.size()-1);
+
             for(size_t i = 0; i < ind.size(); ++i){
                 // Constraint the joints angles to the corresponding position limits
-                angles_joints[i] = ind.data(i) * pos_limits[i];
-                angles[i] = ind.data(i) * pos_limits[i];
+                angles_joints[i] = ind.data(i) * global::pos_limits[i];
+                if (i != ind.size() -1)
+                    angles[i] = ind.data(i) * global::pos_limits[i];
             }
+
+            // Force close gripper 
+            angles_joints[7] = 0.; 
+
             global::simu->set_goal_configuration(angles_joints);
 
             // Run simulation
@@ -110,12 +116,16 @@ FIT_QD(AngularVariance){
 
             // Collect recorded data
             double total_movement = global::simu->get_total_joints_motion();
+            std::cout << "Total Movement " << total_movement << std::endl;
             double total_torque = global::simu->get_total_torque();
+            std::cout << "Total torque " << total_torque << std::endl;
             double total_steps = global::simu->get_total_steps();
+            std::cout << "Total steps " << total_steps << std::endl;
             Eigen::VectorXd end_effector_pose = global::simu->get_final_pose();
 
             // Computes joints variance
             double joints_variance = sqrt((angles.array() - angles.mean()).square().mean());
+            std::cout << "Joints variance " << joints_variance << std::endl;
 
             // Computes fitness
             this -> _value = - total_movement;
@@ -184,15 +194,17 @@ int main(int argc, char **argv){
     // Display robot_info
     global::simu->display_robot_info();
     
+    // Get Position limits
+    global::pos_limits = global::simu->get_positions_upper_limits();
+    
     // Run simulation
-    double simulation_time = 10.;
-    std::vector<double> conf(global::simu->get_control_dofs(), 0.0);
-    conf[1] = M_PI_2;
-    global::simu->set_goal_configuration(conf);
-    global::simu->run_simu(simulation_time);
-    global::simu->reset_descriptors(global::descriptors);
-    std::cout << "Pose of the end effector \n " << global::simu->get_final_pose().transpose() << std::endl;
-    return 0;
+    // double simulation_time = 10.;
+    // std::vector<double> conf(global::simu->get_control_dofs(), 0.0);
+    // conf[1] = M_PI_2;
+    // global::simu->set_goal_configuration(conf);
+    // global::simu->run_simu(simulation_time);
+    // global::simu->reset_descriptors(global::descriptors);
+    // std::cout << "Pose of the end effector \n " << global::simu->get_final_pose().transpose() << std::endl;
     // -----------------------------------------------------------
     // QD Definition
     // -----------------------------------------------------------
@@ -201,7 +213,7 @@ int main(int argc, char **argv){
     std::string results_name = "schunk_l1_experiment";
 
     // Define fitness function
-    typedef AngularVariance<Params> fit_t; // Fitness function for the algorithm
+    typedef FitPose<Params> fit_t; // Fitness function for the algorithm
 
     // Define evaluation type
     typedef eval::Parallel<Params> eval_t;
