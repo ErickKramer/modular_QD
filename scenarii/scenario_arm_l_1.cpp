@@ -62,15 +62,16 @@ struct Params{
     struct ea{
 
         // Parameters for the evolutionary algorithm
-        SFERES_CONST size_t behav_dim = 2; // Dimensions of the behavioral descriptor (Name expected by other files)
+        SFERES_CONST size_t behav_dim = 3; // Dimensions of the behavioral descriptor (Name expected by other files)
         SFERES_ARRAY(size_t, behav_shape, 100, 100); // Dimensions of the grid
         SFERES_CONST size_t genotype_dimensions = 8;
     };
 
     struct pop{
-        SFERES_CONST size_t size = 200; // Size of the population (batch)
-        SFERES_CONST size_t nb_gen = 10001; // Number of generations to run
-        SFERES_CONST size_t dump_period = 1000; // Rate to write the archive
+        SFERES_CONST size_t size = 50; // Size of the population (batch)
+        // SFERES_CONST size_t nb_gen = 10001; // Number of generations to run
+        SFERES_CONST size_t nb_gen = 2001; // Number of generations to run
+        SFERES_CONST size_t dump_period = 50; // Rate to write the archive
     };
 
     struct parameters{
@@ -113,34 +114,23 @@ FIT_QD(FitPose){
 
             // Launch simulation 
             auto robot = global::global_robot->clone();
-
             arm_dart::SchunkArmSimu simu(angles_joints, robot, 0.001, global::end_effector_name);
-
             simu.init_controller(global::pid_file_path);
-
             simu.set_descriptors(global::descriptors);
-
-            // Sanity prints
-            std::cout << "Angles Joints size " <<angles_joints.size() << std::endl;
-            std::cout << "Angles: ";
-            for (auto a : angles_joints) std::cout << a << " ";
-            std::cout << std::endl;
-
             simu.run_simu(10.);
-
 
             // Collect recorded data
             double total_movement = simu.get_total_joints_motion();
-            std::cout << "Total Movement " << total_movement << std::endl;
+            // std::cout << "Total Movement " << total_movement << std::endl;
             double total_torque = simu.get_total_torque();
-            std::cout << "Total torque " << total_torque << std::endl;
+            // std::cout << "Total torque " << total_torque << std::endl;
             double total_steps = simu.get_total_steps();
-            std::cout << "Total steps " << total_steps << std::endl;
+            // std::cout << "Total steps " << total_steps << std::endl;
             Eigen::VectorXd end_effector_pose = simu.get_final_pose();
 
             // Computes joints variance
             double joints_variance = sqrt((angles.array() - angles.mean()).square().mean());
-            std::cout << "Joints variance " << joints_variance << std::endl;
+            // std::cout << "Joints variance " << joints_variance << std::endl;
 
             // Computes fitness
             this -> _value = - total_movement;
@@ -194,26 +184,9 @@ int main(int argc, char **argv){
     global::descriptors = {"joint_states", "pose_states", "velocity_states"};
 
     // Create a dummy simulation just to display info and get pos_limits 
-    std::vector<double> conf(8,0.);
-    // conf[0] = -0.71547;
-    // conf[1] = -0.699279;
-    // conf[2] = 2.07417;
-    // conf[3] = 1.28246;
-    // conf[4] = 2.18346;
-    // conf[5] = 0.25926;
-    // conf[6] = 1.27123;
-    // conf[5] = 0.;
-    arm_dart::SchunkArmSimu dummy_simu(conf, global::global_robot, 0.001, global::end_effector_name);
+    arm_dart::SchunkArmSimu dummy_simu(global::global_robot, global::end_effector_name);
     dummy_simu.display_robot_info();
     global::pos_limits = dummy_simu.get_positions_upper_limits();
-
-    // dummy_simu.init_controller(global::pid_file_path);
-    // dummy_simu.set_descriptors(global::descriptors);
-    // dummy_simu.run_simu(10.);
-    // double total_steps = dummy_simu.get_total_steps();
-    // std::cout << "Total steps " << total_steps << std::endl;
-
-    // return 0;    
     // -----------------------------------------------------------
     // QD Definition
     // -----------------------------------------------------------
@@ -225,8 +198,8 @@ int main(int argc, char **argv){
     typedef FitPose<Params> fit_t; // Fitness function for the algorithm
 
     // Define evaluation type
-    // typedef eval::Parallel<Params> eval_t;
-    typedef eval::Eval<Params> eval_t;
+    typedef eval::Parallel<Params> eval_t;
+    // typedef eval::Eval<Params> eval_t;
 
     // Define genotype
     typedef gen::EvoFloat<Params::ea::genotype_dimensions, Params> gen_t;
