@@ -1,5 +1,53 @@
-//author: Erick Kramer
-//email: erickkramer@gmail.com
+//|--------------------------------------------------------------------
+//| License 
+//|--------------------------------------------------------------------
+//| This file is a part of the sferes2 framework.
+//| Copyright 2009, ISIR / Universite Pierre et Marie Curie (UPMC)
+//| Main contributor(s): Jean-Baptiste Mouret, mouret@isir.fr
+//|
+//| This software is a computer program whose purpose is to facilitate
+//| experiments in evolutionary computation and evolutionary robotics.
+//|
+//| This software is governed by the CeCILL license under French law
+//| and abiding by the rules of distribution of free software.  You
+//| can use, modify and/ or redistribute the software under the terms
+//| of the CeCILL license as circulated by CEA, CNRS and INRIA at the
+//| following URL "http://www.cecill.info".
+//|
+//| As a counterpart to the access to the source code and rights to
+//| copy, modify and redistribute granted by the license, users are
+//| provided only with a limited warranty and the software's author,
+//| the holder of the economic rights, and the successive licensors
+//| have only limited liability.
+//|
+//| In this respect, the user's attention is drawn to the risks
+//| associated with loading, using, modifying and/or developing or
+//| reproducing the software by the user in light of its specific
+//| status of free software, that may mean that it is complicated to
+//| manipulate, and that also therefore means that it is reserved for
+//| developers and experienced professionals having in-depth computer
+//| knowledge. Users are therefore encouraged to load and test the
+//| software's suitability as regards their requirements in conditions
+//| enabling the security of their systems and/or data to be ensured
+//| and, more generally, to use and operate it in the same conditions
+//| as regards security.
+//|
+//| The fact that you are presently reading this means that you have
+//| had knowledge of the CeCILL license and that you accept its terms.
+//|--------------------------------------------------------------------
+//| Experiment:
+//|--------------------------------------------------------------------
+//| author: Erick Kramer
+//| email: erickkramer@gmail.com
+//| Description:
+//|     * Generate a repertoire of joints angle for a robotic arm 
+//|     * Behavioral descriptor: 3D position | 6D Pose 
+//|     * Performance measures:
+//|         - Variance of the joint angles
+//|         - Total torque
+//|         - Amount of movement
+//|         - Movement duration
+//|--------------------------------------------------------------------
 
 #include <iostream>
 #include <cmath>
@@ -64,7 +112,7 @@ struct Params{
         // Parameters for the evolutionary algorithm
         SFERES_CONST size_t behav_dim = 3; // Dimensions of the behavioral descriptor (Name expected by other files)
         SFERES_ARRAY(size_t, behav_shape, 100, 100); // Dimensions of the grid
-        SFERES_CONST size_t genotype_dimensions = 8;
+        SFERES_CONST size_t genotype_dimensions = 7; // Schunk Arm has 7 DoF
     };
 
     struct pop{
@@ -101,16 +149,15 @@ FIT_QD(FitPose){
 
             // Set individual as target configuration
             std::vector<double> angles_joints(ind.size());
-            Eigen::VectorXd angles(ind.size()-1);
+            Eigen::VectorXd angles(ind.size());
 
             for(size_t i = 0; i < ind.size(); ++i){
                 // Constraint the joints angles to the corresponding position limits
                 angles_joints[i] = ind.data(i) * global::pos_limits[i];
-                if (i != ind.size() -1)
-                    angles[i] = ind.data(i) * global::pos_limits[i];
+                angles[i] = ind.data(i) * global::pos_limits[i];
             }
-            // Force close gripper 
-            angles_joints[7] = 0.; 
+            // Add gripper condition
+            angles_joints.push_back(0.); 
 
             // Launch simulation 
             auto robot = global::global_robot->clone();
